@@ -26,6 +26,17 @@ from .serializers import (
     OrderStatusHistorySerializer
 )
 
+# Импорт для уведомлений
+try:
+    from bot.notifications import (
+        send_order_notification,
+        send_order_status_notification,
+        send_subscription_notification
+    )
+    NOTIFICATIONS_ENABLED = True
+except ImportError:
+    NOTIFICATIONS_ENABLED = False
+
 User = get_user_model()
 
 
@@ -236,7 +247,7 @@ class SearchRequestViewSet(viewsets.ModelViewSet):
     """
     queryset = SearchRequest.objects.select_related('user', 'brand', 'model').all()
     serializer_class = SearchRequestSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'brand', 'model']
     ordering_fields = ['id']
@@ -247,15 +258,38 @@ class SearchRequestViewSet(viewsets.ModelViewSet):
         Пользователи видят только свои поисковые запросы
         """
         user = self.request.user
+        if not user.is_authenticated:
+            return SearchRequest.objects.none()
         if user.is_staff:
             return SearchRequest.objects.select_related('user', 'brand', 'model').all()
         return SearchRequest.objects.select_related('user', 'brand', 'model').filter(user=user)
 
     def perform_create(self, serializer):
         """
-        Автоматически устанавливаем текущего пользователя
+        Автоматически устанавливаем текущего пользователя или создаем анонимного
         """
-        serializer.save(user=self.request.user)
+        user = self.request.user
+
+        # Если пользователь не аутентифицирован, создаем или используем дефолтного
+        if not user.is_authenticated:
+            user, _ = User.objects.get_or_create(
+                username='anonymous',
+                defaults={
+                    'first_name': 'Анонимный',
+                    'last_name': 'Пользователь',
+                    'role': User.Role.CLIENT
+                }
+            )
+
+        search_request = serializer.save(user=user)
+
+        # Отправка уведомления в Telegram
+        if NOTIFICATIONS_ENABLED and user.username != 'anonymous':
+            try:
+                send_subscription_notification(user, search_request)
+            except Exception as e:
+                # Не прерываем выполнение, если уведомление не отправилось
+                pass
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -289,7 +323,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         'user', 'car', 'car__brand', 'car__model', 'manager'
     ).all()
     serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrManager]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'car__brand', 'car__model']
     search_fields = ['car__vin', 'car__brand__name', 'car__model__name']
@@ -303,17 +337,20 @@ class OrderViewSet(viewsets.ModelViewSet):
         Администраторы видят все заказы.
         """
         user = self.request.user
-        
+
+        if not user.is_authenticated:
+            return Order.objects.none()
+
         if user.is_staff:
             return Order.objects.select_related(
                 'user', 'car', 'car__brand', 'car__model', 'manager'
             ).all()
-        
+
         if user.role == User.Role.MANAGER:
             return Order.objects.select_related(
                 'user', 'car', 'car__brand', 'car__model', 'manager'
             ).filter(manager=user)
-        
+
         return Order.objects.select_related(
             'user', 'car', 'car__brand', 'car__model', 'manager'
         ).filter(user=user)
@@ -322,9 +359,30 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         Автоматически устанавливаем текущего пользователя как клиента
         """
-        if self.request.user.role != User.Role.CLIENT:
+        user = self.request.user
+
+        # Если пользователь не аутентифицирован, создаем или используем дефолтного
+        if not user.is_authenticated:
+            user, _ = User.objects.get_or_create(
+                username='anonymous',
+                defaults={
+                    'first_name': 'Анонимный',
+                    'last_name': 'Пользователь',
+                    'role': User.Role.CLIENT
+                }
+            )
+        elif user.role != User.Role.CLIENT:
             raise permissions.PermissionDenied("Только клиенты могут создавать заказы")
-        serializer.save(user=self.request.user)
+
+        order = serializer.save(user=user)
+
+        # Отправка уведомления в Telegram
+        if NOTIFICATIONS_ENABLED and user.username != 'anonymous':
+            try:
+                send_order_notification(user, order)
+            except Exception as e:
+                # Не прерываем выполнение, если уведомление не отправилось
+                pass
 
     @action(detail=True, methods=['post'])
     def assign_manager(self, request, pk=None):
@@ -359,23 +417,32 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         order = self.get_object()
         user = request.user
-        
+
         if user.role not in [User.Role.MANAGER, User.Role.CARRIER] and not user.is_staff:
             return Response(
                 {'error': 'Недостаточно прав для изменения статуса'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
         new_status = request.data.get('status')
         if new_status not in dict(Order.Status.choices):
             return Response(
                 {'error': 'Некорректный статус'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        old_status = order.status
         order.status = new_status
         order.save()
-        
+
+        # Отправка уведомления об изменении статуса
+        if NOTIFICATIONS_ENABLED and old_status != new_status:
+            try:
+                send_order_status_notification(order.user, order, new_status)
+            except Exception as e:
+                # Не прерываем выполнение, если уведомление не отправилось
+                pass
+
         serializer = self.get_serializer(order)
         return Response(serializer.data)
 

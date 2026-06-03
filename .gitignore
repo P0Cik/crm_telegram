@@ -100,19 +100,7 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.lnk
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-Icon
-._*
-.Spotlight-V100
-.Trashes
-
-# Linux
-*~
-.directory
+/files
 
 
 # Тестирование и покрытие кода

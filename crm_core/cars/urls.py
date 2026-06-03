@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from . import views
+from . import parser_views
 
 
 router = DefaultRouter()
@@ -33,11 +34,16 @@ def api_root(request, format=None):
         'search_requests': reverse('searchrequest-list', request=request, format=format),
         'orders': reverse('order-list', request=request, format=format),
         'order_status_history': reverse('orderstatushistory-list', request=request, format=format),
+        'parser_webhook': '/api/parser/webhook/',
+        'parser_status': '/api/parser/status/',
     })
 
 
 urlpatterns = [
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    path('api/parser/webhook/', parser_views.parser_webhook, name='parser-webhook'),
+    path('api/parser/status/', parser_views.parser_status, name='parser-status'),
+    path('api/parser/test/', parser_views.parser_test, name='parser-test'),
     path('', api_root),
 ]
