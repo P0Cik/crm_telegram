@@ -116,13 +116,39 @@ class CarSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'vin': 'VIN должен содержать 17 символов'
             })
-        
+
         if 'year' in data and (data['year'] < 1900 or data['year'] > timezone.now().year + 1):
             raise serializers.ValidationError({
                 'year': f'Год выпуска должен быть между 1900 и {timezone.now().year + 1}'
             })
-        
+
         return data
+
+    def create(self, validated_data):
+        # Извлекаем brand_id и model_id
+        brand = validated_data.pop('brand_id', None)
+        model = validated_data.pop('model_id', None)
+
+        # Устанавливаем brand и model
+        if brand:
+            validated_data['brand'] = brand
+        if model:
+            validated_data['model'] = model
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Извлекаем brand_id и model_id
+        brand = validated_data.pop('brand_id', None)
+        model = validated_data.pop('model_id', None)
+
+        # Устанавливаем brand и model
+        if brand:
+            validated_data['brand'] = brand
+        if model:
+            validated_data['model'] = model
+
+        return super().update(instance, validated_data)
 
 
 class AdvertisementSerializer(serializers.ModelSerializer):
@@ -151,13 +177,13 @@ class AdvertisementSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'car_vin': 'Автомобиль с таким VIN не найден'
             })
-        
+
         user = self.context['request'].user
-        if user.role != User.Role.CLIENT:
+        if user.is_authenticated and user.role != User.Role.CLIENT:
             raise serializers.ValidationError({
                 'user': 'Только клиенты могут создавать объявления'
             })
-        
+
         advertisement = Advertisement.objects.create(
             car=car,
             user=user,
@@ -197,9 +223,50 @@ class SearchRequestSerializer(serializers.ModelSerializer):
         return obj.get_status_display()
 
     def create(self, validated_data):
+        # Логируем что пришло в validated_data
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"SearchRequestSerializer.create() - validated_data keys: {validated_data.keys()}")
+        logger.info(f"SearchRequestSerializer.create() - validated_data: {validated_data}")
+
+        # Извлекаем brand_id и model_id из validated_data
+        brand = validated_data.pop('brand_id', None)
+        model = validated_data.pop('model_id', None)
+
+        # Устанавливаем brand и model
+        if brand:
+            validated_data['brand'] = brand
+        if model:
+            validated_data['model'] = model
+
+        # Получаем пользователя из контекста
         user = self.context['request'].user
         validated_data['user'] = user
-        return super().create(validated_data)
+
+        logger.info(f"SearchRequestSerializer.create() - before super().create(), validated_data: {validated_data}")
+
+        instance = super().create(validated_data)
+
+        logger.info(f"SearchRequestSerializer.create() - created instance ID: {instance.id}")
+        logger.info(f"Instance fields: year_min={instance.year_min}, year_max={instance.year_max}, "
+                   f"price_min={instance.price_min}, price_max={instance.price_max}, "
+                   f"mileage_min={instance.mileage_min}, mileage_max={instance.mileage_max}, "
+                   f"fuel_type={instance.fuel_type}, transmission={instance.transmission}")
+
+        return instance
+
+    def update(self, instance, validated_data):
+        # Извлекаем brand_id и model_id
+        brand = validated_data.pop('brand_id', None)
+        model = validated_data.pop('model_id', None)
+
+        # Устанавливаем brand и model
+        if brand:
+            validated_data['brand'] = brand
+        if model:
+            validated_data['model'] = model
+
+        return super().update(instance, validated_data)
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -231,14 +298,14 @@ class OrderSerializer(serializers.ModelSerializer):
                     'car_vin': 'Автомобиль с таким VIN не найден'
                 })
             data['car'] = car
-        
+
         # Проверка, что пользователь является клиентом
         user = self.context['request'].user
-        if user.role != User.Role.CLIENT:
+        if user.is_authenticated and user.role != User.Role.CLIENT:
             raise serializers.ValidationError({
                 'user': 'Только клиенты могут создавать заказы'
             })
-        
+
         return data
 
     def create(self, validated_data):

@@ -21,7 +21,7 @@ class Model(models.Model):
 
 class User(AbstractUser):
     """
-    Кастомная модель пользователя. 
+    Кастомная модель пользователя.
     """
     class Role(models.TextChoices):
         CLIENT = 'CLIENT', 'Клиент'
@@ -29,9 +29,11 @@ class User(AbstractUser):
         CARRIER = 'CARRIER', 'Перевозчик'
 
     patronymic = models.CharField("Отчество", max_length=50, blank=True, null=True)
-    phone = models.CharField("Номер телефона", max_length=20, blank=True, null=True, 
+    phone = models.CharField("Номер телефона", max_length=20, blank=True, null=True,
                              help_text="Формат: +7(***)-***-**-**")
     role = models.CharField("Роль", max_length=20, choices=Role.choices, default=Role.CLIENT)
+    telegram_id = models.BigIntegerField("Telegram ID", unique=True, null=True, blank=True,
+                                         help_text="Уникальный ID пользователя в Telegram")
 
     class Meta:
         verbose_name = "Пользователь"

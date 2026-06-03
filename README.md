@@ -131,7 +131,103 @@ npm run build
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-python crm_core/manage.py runserver
+cd crm_core
+python manage.py migrate
+python manage.py seed_brands  # Заполнить БД брендами и моделями
+python manage.py runserver
 ```
 
 Backend будет доступен на http://localhost:8000
+
+### Важно: Заполнение базы данных
+
+Перед первым использованием необходимо заполнить базу данных брендами и моделями автомобилей:
+
+```bash
+cd crm_core
+python manage.py seed_brands
+```
+
+Эта команда создаст в базе данных следующие бренды и модели:
+- **BMW**: 1-series, 3-series, 5-series, X5, X7
+- **Audi**: A3, A4, A6, Q5
+- **Chevrolet**: Bolt, Captiva, Trailblazer
+- **Ford**: Explorer, Mustang, Ranger
+- **Geely**: Coolray, Monjaro, Tugella
+
+Без этого шага подписки не будут работать!
+
+## Docker Deployment
+
+### Быстрый старт с Docker
+
+1. **Скопируйте файл переменных окружения:**
+```bash
+cp .env.example .env
+```
+
+2. **Отредактируйте `.env` файл:**
+   - Установите `TELEGRAM_BOT_TOKEN` (получите у [@BotFather](https://t.me/BotFather))
+   - Измените `DJANGO_SECRET_KEY` на случайную строку
+   - Укажите `TELEGRAM_WEBHOOK_URL` и `WEBAPP_URL` если используете webhook
+
+3. **Запустите все сервисы:**
+```bash
+docker-compose up -d
+```
+
+4. **Проверьте статус:**
+```bash
+docker-compose ps
+```
+
+### Сервисы
+
+После запуска будут доступны:
+- **Frontend**: http://localhost (порт 80)
+- **Backend API**: http://localhost:8000/api
+- **PostgreSQL**: localhost:5432
+- **Redis**: localhost:6379
+- **Parser Service**: http://localhost:8001
+
+### Управление контейнерами
+
+```bash
+# Запуск
+docker-compose up -d
+
+# Остановка
+docker-compose down
+
+# Перезапуск
+docker-compose restart
+
+# Просмотр логов
+docker-compose logs -f
+
+# Логи конкретного сервиса
+docker-compose logs -f backend
+
+# Пересборка после изменений
+docker-compose up -d --build
+
+# Выполнить команду в контейнере
+docker-compose exec backend python manage.py createsuperuser
+```
+
+### Структура Docker контейнеров
+
+- **postgres** - PostgreSQL 16 база данных
+- **redis** - Redis для кэширования и Celery
+- **backend** - Django REST API + автозаполнение БД брендами
+- **celery_worker** - Обработка фоновых задач
+- **celery_beat** - Планировщик периодических задач
+- **telegram_bot** - Telegram бот для уведомлений
+- **frontend** - React приложение с Nginx
+- **parser_service** - Сервис парсинга (заглушка)
+
+**Важно**: При первом запуске backend автоматически выполнит:
+- Миграции базы данных
+- Заполнение брендами и моделями (`seed_brands`)
+- Сбор статических файлов
+

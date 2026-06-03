@@ -94,19 +94,50 @@ export default function SubscriptionsManager({
         ) : (
           <div className="space-y-2">
             {subscriptions.map((s) => (
-              <div 
+              <div
                 key={s.id}
                 className="bg-white border border-slate-150 p-3.5 rounded-xl flex items-center justify-between shadow-sm"
               >
-                <div>
+                <div className="flex-1">
                   <h4 className="font-bold text-slate-800 text-sm">{s.make} {s.model}</h4>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                    {s.yearFrom && s.yearTo ? `Год: ${s.yearFrom}-${s.yearTo} • ` : ''}
-                    {s.priceRubFrom && s.priceRubTo 
-                      ? `Цена: ${(s.priceRubFrom / 1000000).toFixed(1)} - ${(s.priceRubTo / 1000000).toFixed(1)} млн ₽`
-                      : 'Любая цена'
-                    }
-                  </p>
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5 space-y-0.5">
+                    {(s.yearFrom || s.yearTo) && (
+                      <div>📅 Год: {s.yearFrom || '...'} - {s.yearTo || '...'}</div>
+                    )}
+                    {(s.priceRubFrom || s.priceRubTo) && (
+                      <div>💰 Цена: {s.priceRubFrom ? (s.priceRubFrom / 1000000).toFixed(1) : '...'} - {s.priceRubTo ? (s.priceRubTo / 1000000).toFixed(1) : '...'} млн ₽</div>
+                    )}
+                    {(s.mileageFrom || s.mileageTo) && (
+                      <div>🛣️ Пробег: {s.mileageFrom || '0'} - {s.mileageTo || '∞'} км</div>
+                    )}
+                    {(s.engineVolumeFrom || s.engineVolumeTo) && (
+                      <div>⚙️ Объём: {s.engineVolumeFrom || '...'} - {s.engineVolumeTo || '...'} л</div>
+                    )}
+                    {(s.powerFrom || s.powerTo) && (
+                      <div>⚡ Мощность: {s.powerFrom || '...'} - {s.powerTo || '...'} л.с.</div>
+                    )}
+                    {s.fuelType && (
+                      <div>⛽ Топливо: {s.fuelType}</div>
+                    )}
+                    {s.gearbox && (
+                      <div>🔧 КПП: {s.gearbox}</div>
+                    )}
+                    {s.driveType && (
+                      <div>🚗 Привод: {s.driveType}</div>
+                    )}
+                    {s.wheelPosition && (
+                      <div>🎯 Руль: {s.wheelPosition}</div>
+                    )}
+                    {s.color && (
+                      <div>🎨 Цвет: {s.color}</div>
+                    )}
+                    {s.country && (
+                      <div>🌍 Страна: {s.country}</div>
+                    )}
+                    {s.condition && (
+                      <div>📋 Состояние: {s.condition}</div>
+                    )}
+                  </div>
                 </div>
 
                 <button

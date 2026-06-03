@@ -142,8 +142,6 @@ dist/
 # Docker (если используете)
 
 .dockerignore
-docker-compose*.yml
-!docker-compose.dev.yml
 
 
 # CI/CD

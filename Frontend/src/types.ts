@@ -51,6 +51,19 @@ export interface Subscription {
   yearTo?: number;
   priceRubFrom?: number;
   priceRubTo?: number;
+  mileageFrom?: number;
+  mileageTo?: number;
+  engineVolumeFrom?: number;
+  engineVolumeTo?: number;
+  powerFrom?: number;
+  powerTo?: number;
+  fuelType?: string;
+  gearbox?: string;
+  wheelPosition?: string;
+  driveType?: string;
+  color?: string;
+  country?: string;
+  condition?: string;
 }
 
 export interface SearchFilters {

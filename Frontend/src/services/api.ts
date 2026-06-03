@@ -5,6 +5,7 @@ import type {
   Subscription,
   SearchFilters
 } from '../types';
+import telegram from '../telegram';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -14,6 +15,39 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
+});
+
+// Добавляем Telegram данные в каждый запрос
+apiClient.interceptors.request.use((config) => {
+  const telegramUser = telegram.getUser();
+
+  console.log('Telegram user:', telegramUser);
+
+  if (telegramUser) {
+    // Добавляем Telegram ID в заголовок
+    config.headers['X-Telegram-User-Id'] = telegramUser.id.toString();
+
+    // Добавляем дополнительные данные пользователя
+    config.headers['X-Telegram-First-Name'] = telegramUser.first_name || '';
+    if (telegramUser.last_name) {
+      config.headers['X-Telegram-Last-Name'] = telegramUser.last_name;
+    }
+    if (telegramUser.username) {
+      config.headers['X-Telegram-Username'] = telegramUser.username;
+    }
+
+    // Добавляем initData для верификации на бэкенде
+    const initData = telegram.getInitData();
+    if (initData) {
+      config.headers['X-Telegram-Init-Data'] = initData;
+    }
+
+    console.log('Request headers:', config.headers);
+  } else {
+    console.warn('No Telegram user found - running outside Telegram?');
+  }
+
+  return config;
 });
 
 // Интерфейсы для API ответов
@@ -51,6 +85,19 @@ interface ApiSubscription {
   year_max?: number;
   price_min?: string;
   price_max?: string;
+  mileage_min?: number;
+  mileage_max?: number;
+  min_engine_volume?: string;
+  max_engine_volume?: string;
+  min_engine_power?: number;
+  max_engine_power?: number;
+  fuel_type?: string;
+  transmission?: string;
+  steering_wheel?: string;
+  drive_type?: string;
+  colors?: string;
+  country?: string;
+  condition?: string;
   status: string;
 }
 
@@ -100,6 +147,19 @@ const transformApiSubscription = (apiSub: ApiSubscription): Subscription => ({
   yearTo: apiSub.year_max,
   priceRubFrom: apiSub.price_min ? parseFloat(apiSub.price_min) : undefined,
   priceRubTo: apiSub.price_max ? parseFloat(apiSub.price_max) : undefined,
+  mileageFrom: apiSub.mileage_min,
+  mileageTo: apiSub.mileage_max,
+  engineVolumeFrom: apiSub.min_engine_volume ? parseFloat(apiSub.min_engine_volume) : undefined,
+  engineVolumeTo: apiSub.max_engine_volume ? parseFloat(apiSub.max_engine_volume) : undefined,
+  powerFrom: apiSub.min_engine_power,
+  powerTo: apiSub.max_engine_power,
+  fuelType: apiSub.fuel_type,
+  gearbox: apiSub.transmission,
+  wheelPosition: apiSub.steering_wheel,
+  driveType: apiSub.drive_type,
+  color: apiSub.colors,
+  country: apiSub.country,
+  condition: apiSub.condition,
 });
 
 const mapOrderStatus = (status: string): 'dealing' | 'korea_warehouse' | 'shipping' | 'delivered' => {
@@ -117,6 +177,42 @@ const mapOrderStatus = (status: string): 'dealing' | 'korea_warehouse' | 'shippi
 
 // API методы
 export const api = {
+  // Бренды
+  brands: {
+    getAll: async (): Promise<Array<{ id: number; name: string }>> => {
+      try {
+        const response = await apiClient.get('/brands/');
+        return response.data.results || response.data;
+      } catch (error) {
+        console.error('Ошибка при загрузке брендов:', error);
+        return [];
+      }
+    },
+  },
+
+  // Модели
+  models: {
+    getAll: async (): Promise<Array<{ id: number; name: string; brand: { id: number; name: string } }>> => {
+      try {
+        const response = await apiClient.get('/models/');
+        return response.data.results || response.data;
+      } catch (error) {
+        console.error('Ошибка при загрузке моделей:', error);
+        return [];
+      }
+    },
+
+    getByBrand: async (brandId: number): Promise<Array<{ id: number; name: string }>> => {
+      try {
+        const response = await apiClient.get('/models/', { params: { brand: brandId } });
+        return response.data.results || response.data;
+      } catch (error) {
+        console.error('Ошибка при загрузке моделей бренда:', error);
+        return [];
+      }
+    },
+  },
+
   // Автомобили
   cars: {
     getAll: async (): Promise<Car[]> => {
@@ -241,7 +337,10 @@ export const api = {
     getAll: async (): Promise<Subscription[]> => {
       try {
         const response = await apiClient.get('/search-requests/');
-        return response.data.results.map(transformApiSubscription);
+        console.log('Raw API response for subscriptions:', response.data);
+        const transformed = response.data.results.map(transformApiSubscription);
+        console.log('Transformed subscriptions:', transformed);
+        return transformed;
       } catch (error) {
         console.error('Ошибка при загрузке подписок:', error);
         return [];
@@ -250,13 +349,64 @@ export const api = {
 
     create: async (subscription: Omit<Subscription, 'id'>): Promise<Subscription | null> => {
       try {
-        const response = await apiClient.post('/search-requests/', {
+        // Получаем все бренды и модели для поиска ID
+        const brands = await api.brands.getAll();
+        const models = await api.models.getAll();
+
+        console.log('Available brands:', brands);
+        console.log('Available models:', models);
+        console.log('Creating subscription for:', subscription);
+
+        // Находим brand_id по названию
+        const brand = brands.find(b => b.name.toLowerCase() === subscription.make.toLowerCase());
+        if (!brand) {
+          console.error(`Бренд "${subscription.make}" не найден`);
+          return null;
+        }
+
+        // Находим model_id по названию и brand_id
+        const model = models.find(m =>
+          m.name.toLowerCase() === subscription.model.toLowerCase() &&
+          m.brand.id === brand.id
+        );
+        if (!model) {
+          console.error(`Модель "${subscription.model}" не найдена для бренда "${subscription.make}"`);
+          return null;
+        }
+
+        console.log('Found brand:', brand, 'model:', model);
+
+        const requestData = {
+          brand_id: brand.id,
+          model_id: model.id,
           year_min: subscription.yearFrom,
           year_max: subscription.yearTo,
           price_min: subscription.priceRubFrom,
           price_max: subscription.priceRubTo,
-        });
-        return transformApiSubscription(response.data);
+          mileage_min: subscription.mileageFrom,
+          mileage_max: subscription.mileageTo,
+          min_engine_volume: subscription.engineVolumeFrom,
+          max_engine_volume: subscription.engineVolumeTo,
+          min_engine_power: subscription.powerFrom,
+          max_engine_power: subscription.powerTo,
+          fuel_type: subscription.fuelType,
+          transmission: subscription.gearbox,
+          steering_wheel: subscription.wheelPosition,
+          drive_type: subscription.driveType,
+          colors: subscription.color,
+          country: subscription.country,
+          condition: subscription.condition,
+        };
+
+        console.log('Sending request to backend:', requestData);
+
+        const response = await apiClient.post('/search-requests/', requestData);
+
+        console.log('API response:', response.data);
+        const transformed = transformApiSubscription(response.data);
+        console.log('Transformed subscription:', transformed);
+
+        return transformed;
       } catch (error) {
         console.error('Ошибка при создании подписки:', error);
         return null;

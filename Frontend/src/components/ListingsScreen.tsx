@@ -8,7 +8,7 @@ interface ListingsScreenProps {
   onBack: () => void;
   onOpenFilters: () => void;
   onSelectCar: (id: string) => void;
-  onAddSubscription: (make: string, model: string) => void;
+  onAddSubscription: (make: string, model: string, filters?: SearchFilters) => void;
   subscriptions: Subscription[];
 }
 
@@ -92,7 +92,7 @@ export default function ListingsScreen({
   );
 
   const handleSubscribeClick = () => {
-    onAddSubscription(activeMake, activeModel);
+    onAddSubscription(activeMake, activeModel, filters);
     setToastMessage(`🎉 Подписка оформлена на ${activeMake} ${activeModel}! Вы получите TG-уведомление при новых завозах.`);
     setTimeout(() => setToastMessage(null), 4500);
   };

@@ -258,36 +258,49 @@ class SearchRequestViewSet(viewsets.ModelViewSet):
         Пользователи видят только свои поисковые запросы
         """
         user = self.request.user
+
+        # Если пользователь не аутентифицирован, показываем пустой список
         if not user.is_authenticated:
             return SearchRequest.objects.none()
+
         if user.is_staff:
             return SearchRequest.objects.select_related('user', 'brand', 'model').all()
+
         return SearchRequest.objects.select_related('user', 'brand', 'model').filter(user=user)
 
     def perform_create(self, serializer):
         """
-        Автоматически устанавливаем текущего пользователя или создаем анонимного
+        Автоматически устанавливаем текущего пользователя
         """
         user = self.request.user
 
-        # Если пользователь не аутентифицирован, создаем или используем дефолтного
-        if not user.is_authenticated:
-            user, _ = User.objects.get_or_create(
-                username='anonymous',
-                defaults={
-                    'first_name': 'Анонимный',
-                    'last_name': 'Пользователь',
-                    'role': User.Role.CLIENT
-                }
-            )
+        # Логируем входящие данные
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Creating SearchRequest with data: {self.request.data}")
+        logger.info(f"User: {user.username if user.is_authenticated else 'Anonymous'}, Telegram ID: {getattr(user, 'telegram_id', None)}")
 
-        search_request = serializer.save(user=user)
+        # Если пользователь не аутентифицирован, возвращаем ошибку
+        if not user.is_authenticated:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Необходима аутентификация через Telegram")
+
+        search_request = serializer.save()
+
+        # Логируем сохраненные данные
+        logger.info(f"SearchRequest saved with ID: {search_request.id}")
+        logger.info(f"Saved fields: brand={search_request.brand}, model={search_request.model}, "
+                   f"year_min={search_request.year_min}, year_max={search_request.year_max}, "
+                   f"price_min={search_request.price_min}, price_max={search_request.price_max}, "
+                   f"mileage_min={search_request.mileage_min}, mileage_max={search_request.mileage_max}, "
+                   f"fuel_type={search_request.fuel_type}, transmission={search_request.transmission}")
 
         # Отправка уведомления в Telegram
-        if NOTIFICATIONS_ENABLED and user.username != 'anonymous':
+        if NOTIFICATIONS_ENABLED:
             try:
                 send_subscription_notification(user, search_request)
             except Exception as e:
+                logger.error(f"Failed to send subscription notification: {e}")
                 # Не прерываем выполнение, если уведомление не отправилось
                 pass
 
@@ -312,6 +325,16 @@ class SearchRequestViewSet(viewsets.ModelViewSet):
         search_request.save()
         serializer = self.get_serializer(search_request)
         return Response(serializer.data)
+
+    def perform_destroy(self, instance):
+        """
+        Логирование при удалении подписки
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Deleting SearchRequest ID: {instance.id}, User: {instance.user.username}")
+        super().perform_destroy(instance)
+        logger.info(f"SearchRequest ID: {instance.id} deleted successfully")
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -338,6 +361,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
 
+        # Если пользователь не аутентифицирован, показываем пустой список
         if not user.is_authenticated:
             return Order.objects.none()
 
@@ -361,23 +385,18 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
 
-        # Если пользователь не аутентифицирован, создаем или используем дефолтного
+        # Если пользователь не аутентифицирован, возвращаем ошибку
         if not user.is_authenticated:
-            user, _ = User.objects.get_or_create(
-                username='anonymous',
-                defaults={
-                    'first_name': 'Анонимный',
-                    'last_name': 'Пользователь',
-                    'role': User.Role.CLIENT
-                }
-            )
-        elif user.role != User.Role.CLIENT:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Необходима аутентификация через Telegram")
+
+        if user.role != User.Role.CLIENT:
             raise permissions.PermissionDenied("Только клиенты могут создавать заказы")
 
-        order = serializer.save(user=user)
+        order = serializer.save()
 
         # Отправка уведомления в Telegram
-        if NOTIFICATIONS_ENABLED and user.username != 'anonymous':
+        if NOTIFICATIONS_ENABLED:
             try:
                 send_order_notification(user, order)
             except Exception as e:

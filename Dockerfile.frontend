@@ -1,6 +1,9 @@
 # Frontend Dockerfile
 FROM node:20-alpine as build
 
+# Configure npm registry (optional: use if Docker Hub is slow)
+# RUN npm config set registry https://registry.npmmirror.com
+
 # Создание рабочей директории
 WORKDIR /app
 

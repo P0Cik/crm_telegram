@@ -140,11 +140,10 @@ export default function App() {
     if (result) {
       const updatedOrders = orders.map(o => o.id === updatedOrder.id ? updatedOrder : o);
       updatePersistedData(cars, updatedOrders, subscriptions);
-      setLatestOrdered(updatedOrder);
     }
   };
 
-  const handleAddSubscription = async (make: string, model: string) => {
+  const handleAddSubscription = async (make: string, model: string, filters?: SearchFilters) => {
     // Avoid double subscribing
     const exists = subscriptions.some(s => s.make.toLowerCase() === make.toLowerCase() && s.model.toLowerCase() === model.toLowerCase());
     if (exists) return;
@@ -152,8 +151,23 @@ export default function App() {
     const newSub = await api.subscriptions.create({
       make,
       model,
-      yearFrom: 2017,
-      yearTo: 2026
+      yearFrom: filters?.yearFrom ? parseInt(filters.yearFrom) : 2017,
+      yearTo: filters?.yearTo ? parseInt(filters.yearTo) : 2026,
+      priceRubFrom: filters?.priceFrom ? parseFloat(filters.priceFrom) * 1000000 : undefined,
+      priceRubTo: filters?.priceTo ? parseFloat(filters.priceTo) * 1000000 : undefined,
+      mileageFrom: undefined, // Пробег обычно не задаётся при подписке
+      mileageTo: undefined,
+      engineVolumeFrom: filters?.engineVolumeFrom ? parseFloat(filters.engineVolumeFrom) : undefined,
+      engineVolumeTo: filters?.engineVolumeTo ? parseFloat(filters.engineVolumeTo) : undefined,
+      powerFrom: filters?.powerFrom ? parseInt(filters.powerFrom) : undefined,
+      powerTo: filters?.powerTo ? parseInt(filters.powerTo) : undefined,
+      fuelType: filters?.fuelType && filters.fuelType !== 'Все виды' ? filters.fuelType : undefined,
+      gearbox: filters?.gearbox && filters.gearbox !== 'Все коробки' ? filters.gearbox : undefined,
+      wheelPosition: filters?.wheelPosition && filters.wheelPosition !== 'Все варианты' ? filters.wheelPosition : undefined,
+      driveType: filters?.driveType && filters.driveType !== 'Все приводы' ? filters.driveType : undefined,
+      color: filters?.color && filters.color !== 'Все цвета' ? filters.color : undefined,
+      country: filters?.country || undefined,
+      condition: filters?.condition && filters.condition !== 'all' ? filters.condition : undefined,
     });
 
     if (newSub) {
