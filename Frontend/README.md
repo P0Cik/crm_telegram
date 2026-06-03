@@ -1,16 +1,85 @@
-# React + Vite
+# Korea CRM & Mini-App Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Описание
+Интегрированный React интерфейс для CRM-системы импорта автомобилей из Южной Кореи. Включает Telegram Mini-App для клиентов и административную панель для менеджеров.
 
-Currently, two official plugins are available:
+## Структура проекта
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```
+Frontend/
+├── src/
+│   ├── components/         # Все React компоненты
+│   │   ├── AdminCRM.tsx           # Панель управления менеджера
+│   │   ├── CarDetailsScreen.tsx   # Детальная карточка автомобиля
+│   │   ├── CheckpointPhotoScreen.tsx  # Просмотр фото чекпоинтов
+│   │   ├── FiltersScreen.tsx      # Экран фильтров поиска
+│   │   ├── HomeScreen.tsx         # Главный экран клиента
+│   │   ├── ListingsScreen.tsx     # Список объявлений
+│   │   ├── MakesSelector.tsx      # Выбор марки авто
+│   │   ├── ModelsSelector.tsx     # Выбор модели авто
+│   │   ├── OrderTrackerScreen.tsx # Трекинг заказа
+│   │   ├── SubscriptionsManager.tsx   # Управление подписками
+│   │   └── TelegramSimulator.tsx  # Симулятор Telegram-бота
+│   ├── services/
+│   │   └── mockData.ts     # Данные и localStorage API
+│   ├── App.tsx             # Главный компонент приложения
+│   ├── main.tsx            # Точка входа
+│   ├── types.ts            # TypeScript типы
+│   └── index.css           # Tailwind CSS стили
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── README.md
+```
 
-## React Compiler
+## Установка и запуск
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Требования
+- Node.js 18+ и npm
 
-## Expanding the ESLint configuration
+### Установка зависимостей
+```bash
+cd Frontend
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Запуск dev-сервера
+```bash
+npm run dev
+```
+Приложение будет доступно на http://localhost:3000
+
+### Сборка для production
+```bash
+npm run build
+```
+
+## Основные функции
+
+### Для клиентов (Mini-App)
+- Поиск автомобилей по марке, модели и параметрам
+- Просмотр каталога с фильтрацией
+- Оформление заказов
+- Отслеживание статуса доставки с фото-отчетами
+- Управление подписками на уведомления
+
+### Для менеджеров (CRM)
+- Добавление новых автомобилей в каталог
+- Управление заказами и статусами
+- Обновление чекпоинтов доставки
+- Просмотр подписок клиентов
+
+## Технологии
+- React 19 + TypeScript
+- Vite 8
+- Tailwind CSS 4
+- Lucide React (иконки)
+- Motion (анимации)
+- localStorage для хранения данных
+
+## Интеграция с backend
+Текущая версия использует mockData и localStorage. Для интеграции с реальным API необходимо:
+1. Заменить функции в `src/services/mockData.ts` на API-вызовы
+2. Настроить axios или fetch для работы с backend
+3. Добавить обработку ошибок и загрузки
