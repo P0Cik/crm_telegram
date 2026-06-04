@@ -6,6 +6,7 @@ from rest_framework.reverse import reverse
 
 from . import views
 from . import parser_views
+from . import telegram_views
 
 
 router = DefaultRouter()
@@ -40,10 +41,10 @@ def api_root(request, format=None):
 
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    path('api/parser/webhook/', parser_views.parser_webhook, name='parser-webhook'),
-    path('api/parser/status/', parser_views.parser_status, name='parser-status'),
-    path('api/parser/test/', parser_views.parser_test, name='parser-test'),
-    path('', api_root),
+    path('auth/telegram/', telegram_views.telegram_auth, name='telegram-auth'),
+    path('parser/webhook/', parser_views.parser_webhook, name='parser-webhook'),
+    path('parser/status/', parser_views.parser_status, name='parser-status'),
+    path('parser/test/', parser_views.parser_test, name='parser-test'),
 ]

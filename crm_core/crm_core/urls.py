@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('cars.urls')),
+    path('api/', include('cars.urls')),
 ]
 
 if settings.DEBUG:

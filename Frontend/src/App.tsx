@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from './services/api';
+import authService from './services/auth';
 import { Car, Order, Subscription, SearchFilters, AppView, UserRole, Checkpoint } from './types';
 import telegram from './telegram';
 
@@ -44,6 +45,8 @@ export default function App() {
 
   // Telegram user state
   const [telegramUser, setTelegramUser] = useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
   // Navigation and Interactive flow states
   const [activeRole, setActiveRole] = useState<UserRole>('client');
@@ -62,27 +65,53 @@ export default function App() {
   useEffect(() => {
     console.log('App initialization started');
 
-    // Инициализация Telegram WebApp
-    try {
-      telegram.init();
-      console.log('Telegram init called');
-    } catch (e) {
-      console.error('Telegram init error:', e);
-    }
-
-    // Проверка, что приложение запущено в Telegram
-    if (telegram.isInTelegram()) {
-      const user = telegram.getUser();
-      console.log('Telegram User:', user);
-      setTelegramUser(user);
-
-      // Применить тему Telegram
-      const webApp = telegram.getWebApp();
-      if (webApp?.colorScheme === 'dark') {
-        document.documentElement.classList.add('dark');
+    const initializeApp = async () => {
+      // Инициализация Telegram WebApp
+      try {
+        telegram.init();
+        console.log('Telegram init called');
+      } catch (e) {
+        console.error('Telegram init error:', e);
       }
-    } else {
-      console.log('Not running in Telegram');
+
+      // Проверка, что приложение запущено в Telegram
+      if (telegram.isInTelegram()) {
+        const user = telegram.getUser();
+        console.log('Telegram User:', user);
+        setTelegramUser(user);
+
+        // Применить тему Telegram
+        const webApp = telegram.getWebApp();
+        if (webApp?.colorScheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+
+        // Аутентификация через Telegram
+        console.log('Starting authentication...');
+        const authResult = await authService.authenticate();
+
+        if (authResult?.success) {
+          console.log('Authentication successful:', authResult.user);
+          setIsAuthenticated(true);
+        } else {
+          console.error('Authentication failed');
+          setIsAuthenticated(false);
+        }
+      } else {
+        console.log('Not running in Telegram');
+        setIsAuthenticated(false);
+      }
+
+      setIsAuthenticating(false);
+    };
+
+    initializeApp();
+  }, []);
+
+  // Загрузка данных после успешной аутентификации
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
     }
 
     // Загрузка данных из API
@@ -109,7 +138,7 @@ export default function App() {
     };
 
     loadData();
-  }, []);
+  }, [isAuthenticated]);
 
   // Sync state modifications to API automatically
   const updatePersistedData = async (newCars: Car[], newOrders: Order[], newSubs: Subscription[]) => {
@@ -374,7 +403,21 @@ export default function App() {
         {/* Dynamic screen output window */}
         <section className="w-full">
 
-          {activeRole === 'client' ? (
+          {isAuthenticating ? (
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm max-w-md mx-auto min-h-[640px] flex items-center justify-center">
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="text-sm text-slate-600">Авторизация...</p>
+              </div>
+            </div>
+          ) : !isAuthenticated ? (
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm max-w-md mx-auto min-h-[640px] flex items-center justify-center">
+              <div className="text-center space-y-3">
+                <p className="text-sm text-slate-600">Ошибка авторизации</p>
+                <p className="text-xs text-slate-400">Пожалуйста, откройте приложение через Telegram</p>
+              </div>
+            </div>
+          ) : activeRole === 'client' ? (
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm max-w-md mx-auto min-h-[640px] flex flex-col justify-between relative overflow-hidden">
 
               {/* Telegram App Bar Frame Mockup */}

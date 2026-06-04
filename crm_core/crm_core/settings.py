@@ -19,6 +19,35 @@ DEBUG = environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = environ.get('ALLOWED_HOSTS', '*').split(',')
 
+# Добавляем поддержку Cloudflare Tunnel
+if environ.get('CLOUDFLARE_TUNNEL'):
+    ALLOWED_HOSTS.append(environ.get('CLOUDFLARE_TUNNEL'))
+
+# Разрешаем все *.trycloudflare.com домены для разработки
+if DEBUG:
+    ALLOWED_HOSTS.append('.trycloudflare.com')
+
+# CSRF settings для Cloudflare Tunnel
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+]
+
+# Добавляем Cloudflare Tunnel домены
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS.extend([
+        'https://*.trycloudflare.com',
+    ])
+
+# Если указан конкретный tunnel
+if environ.get('CLOUDFLARE_TUNNEL'):
+    CSRF_TRUSTED_ORIGINS.append(f"https://{environ.get('CLOUDFLARE_TUNNEL')}")
+    CSRF_TRUSTED_ORIGINS.append(f"http://{environ.get('CLOUDFLARE_TUNNEL')}")
+q
 
 # Application definition
 
@@ -31,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_filters',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     'cars',
 ]
@@ -44,11 +74,27 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
+}
+
+# JWT Settings
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
 }
 
 MIDDLEWARE = [
@@ -58,7 +104,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'crm_core.telegram_auth.TelegramAuthMiddleware',  # Наш Telegram Auth middleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -163,7 +208,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'backend_static')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

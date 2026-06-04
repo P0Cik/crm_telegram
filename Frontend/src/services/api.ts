@@ -5,9 +5,9 @@ import type {
   Subscription,
   SearchFilters
 } from '../types';
-import telegram from '../telegram';
+import authService from './auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -17,34 +17,12 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Добавляем Telegram данные в каждый запрос
+// Добавляем JWT токен в каждый запрос
 apiClient.interceptors.request.use((config) => {
-  const telegramUser = telegram.getUser();
+  const token = authService.getAccessToken();
 
-  console.log('Telegram user:', telegramUser);
-
-  if (telegramUser) {
-    // Добавляем Telegram ID в заголовок
-    config.headers['X-Telegram-User-Id'] = telegramUser.id.toString();
-
-    // Добавляем дополнительные данные пользователя
-    config.headers['X-Telegram-First-Name'] = telegramUser.first_name || '';
-    if (telegramUser.last_name) {
-      config.headers['X-Telegram-Last-Name'] = telegramUser.last_name;
-    }
-    if (telegramUser.username) {
-      config.headers['X-Telegram-Username'] = telegramUser.username;
-    }
-
-    // Добавляем initData для верификации на бэкенде
-    const initData = telegram.getInitData();
-    if (initData) {
-      config.headers['X-Telegram-Init-Data'] = initData;
-    }
-
-    console.log('Request headers:', config.headers);
-  } else {
-    console.warn('No Telegram user found - running outside Telegram?');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
   }
 
   return config;
@@ -139,28 +117,35 @@ const transformApiOrder = (apiOrder: ApiOrder): Order => {
   };
 };
 
-const transformApiSubscription = (apiSub: ApiSubscription): Subscription => ({
-  id: apiSub.id.toString(),
-  make: apiSub.brand?.name || '',
-  model: apiSub.model?.name || '',
-  yearFrom: apiSub.year_min,
-  yearTo: apiSub.year_max,
-  priceRubFrom: apiSub.price_min ? parseFloat(apiSub.price_min) : undefined,
-  priceRubTo: apiSub.price_max ? parseFloat(apiSub.price_max) : undefined,
-  mileageFrom: apiSub.mileage_min,
-  mileageTo: apiSub.mileage_max,
-  engineVolumeFrom: apiSub.min_engine_volume ? parseFloat(apiSub.min_engine_volume) : undefined,
-  engineVolumeTo: apiSub.max_engine_volume ? parseFloat(apiSub.max_engine_volume) : undefined,
-  powerFrom: apiSub.min_engine_power,
-  powerTo: apiSub.max_engine_power,
-  fuelType: apiSub.fuel_type,
-  gearbox: apiSub.transmission,
-  wheelPosition: apiSub.steering_wheel,
-  driveType: apiSub.drive_type,
-  color: apiSub.colors,
-  country: apiSub.country,
-  condition: apiSub.condition,
-});
+const transformApiSubscription = (apiSub: ApiSubscription): Subscription => {
+  console.log('Transforming API subscription:', apiSub);
+
+  const transformed = {
+    id: apiSub.id.toString(),
+    make: apiSub.brand?.name || '',
+    model: apiSub.model?.name || '',
+    yearFrom: apiSub.year_min,
+    yearTo: apiSub.year_max,
+    priceRubFrom: apiSub.price_min ? parseFloat(apiSub.price_min) : undefined,
+    priceRubTo: apiSub.price_max ? parseFloat(apiSub.price_max) : undefined,
+    mileageFrom: apiSub.mileage_min,
+    mileageTo: apiSub.mileage_max,
+    engineVolumeFrom: apiSub.min_engine_volume ? parseFloat(apiSub.min_engine_volume) : undefined,
+    engineVolumeTo: apiSub.max_engine_volume ? parseFloat(apiSub.max_engine_volume) : undefined,
+    powerFrom: apiSub.min_engine_power,
+    powerTo: apiSub.max_engine_power,
+    fuelType: apiSub.fuel_type,
+    gearbox: apiSub.transmission,
+    wheelPosition: apiSub.steering_wheel,
+    driveType: apiSub.drive_type,
+    color: apiSub.colors,
+    country: apiSub.country,
+    condition: apiSub.condition,
+  };
+
+  console.log('Transformed subscription:', transformed);
+  return transformed;
+};
 
 const mapOrderStatus = (status: string): 'dealing' | 'korea_warehouse' | 'shipping' | 'delivered' => {
   const statusMap: Record<string, 'dealing' | 'korea_warehouse' | 'shipping' | 'delivered'> = {
@@ -181,10 +166,17 @@ export const api = {
   brands: {
     getAll: async (): Promise<Array<{ id: number; name: string }>> => {
       try {
+        console.log('Requesting brands from API...');
         const response = await apiClient.get('/brands/');
-        return response.data.results || response.data;
+        console.log('Brands API response:', response.data);
+        const results = response.data.results || response.data;
+        console.log('Parsed brands:', results);
+        return results;
       } catch (error) {
         console.error('Ошибка при загрузке брендов:', error);
+        if (error instanceof Error) {
+          console.error('Error details:', error.message);
+        }
         return [];
       }
     },
@@ -194,10 +186,17 @@ export const api = {
   models: {
     getAll: async (): Promise<Array<{ id: number; name: string; brand: { id: number; name: string } }>> => {
       try {
+        console.log('Requesting models from API...');
         const response = await apiClient.get('/models/');
-        return response.data.results || response.data;
+        console.log('Models API response:', response.data);
+        const results = response.data.results || response.data;
+        console.log('Parsed models:', results);
+        return results;
       } catch (error) {
         console.error('Ошибка при загрузке моделей:', error);
+        if (error instanceof Error) {
+          console.error('Error details:', error.message);
+        }
         return [];
       }
     },
