@@ -179,9 +179,10 @@ class AdvertisementSerializer(serializers.ModelSerializer):
             })
 
         user = self.context['request'].user
-        if user.is_authenticated and user.role != User.Role.CLIENT:
+        # Только менеджеры могут создавать объявления
+        if user.is_authenticated and user.role != User.Role.MANAGER:
             raise serializers.ValidationError({
-                'user': 'Только клиенты могут создавать объявления'
+                'user': 'Только менеджеры могут создавать объявления'
             })
 
         advertisement = Advertisement.objects.create(
@@ -299,11 +300,11 @@ class OrderSerializer(serializers.ModelSerializer):
                 })
             data['car'] = car
 
-        # Проверка, что пользователь является клиентом
+        # Только менеджеры могут создавать заказы
         user = self.context['request'].user
-        if user.is_authenticated and user.role != User.Role.CLIENT:
+        if user.is_authenticated and user.role != User.Role.MANAGER:
             raise serializers.ValidationError({
-                'user': 'Только клиенты могут создавать заказы'
+                'user': 'Только менеджеры могут создавать заказы'
             })
 
         return data
@@ -316,22 +317,28 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
     order = OrderSerializer(read_only=True)
+    order_id = serializers.PrimaryKeyRelatedField(
+        queryset=Order.objects.all(),
+        source='order',
+        write_only=True
+    )
     status_display = serializers.SerializerMethodField()
     updated_by = UserSerializer(read_only=True)
-    media_file = serializers.SerializerMethodField()
+    media_file_url = serializers.SerializerMethodField()
+    media_file = serializers.FileField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = OrderStatusHistory
         fields = [
-            'id', 'order', 'status', 'status_display', 'media_file',
-            'created_at', 'updated_by', 'updated_at'
+            'id', 'order', 'order_id', 'status', 'status_display', 'media_file',
+            'media_file_url', 'created_at', 'updated_by', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'updated_by']
 
     def get_status_display(self, obj):
         return obj.get_status_display()
 
-    def get_media_file(self, obj):
+    def get_media_file_url(self, obj):
         if obj.media_file:
             request = self.context.get('request')
             if request:

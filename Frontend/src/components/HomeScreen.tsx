@@ -1,6 +1,6 @@
 import React from 'react';
-import { Sliders, History, Bell, MapPin, Sparkles, Plus, Trash2, ArrowRight, UserCheck } from 'lucide-react';
-import { Car, Order, Subscription, SearchFilters } from '../types';
+import { Sliders, History, Bell, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { Car, Order, Subscription } from '../types';
 
 interface HomeScreenProps {
   currentTab: 'orders' | 'subscriptions';
@@ -14,7 +14,7 @@ interface HomeScreenProps {
   onDeleteSubscription: (id: string) => void;
   onViewCarDetails: (id: string) => void;
   onOpenSubscriptions: () => void;
-  telegramUser?: any;
+  onEditSubscription: (id: string) => void;
 }
 
 export default function HomeScreen({
@@ -29,6 +29,7 @@ export default function HomeScreen({
   onDeleteSubscription,
   onViewCarDetails,
   onOpenSubscriptions,
+  onEditSubscription,
   telegramUser
 }: HomeScreenProps) {
   return (
@@ -186,19 +187,34 @@ export default function HomeScreen({
                     </div>
                     <div>
                       <h4 className="font-bold text-slate-800 text-sm">{s.make} {s.model}</h4>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">
-                        {s.yearFrom && s.yearTo ? `${s.yearFrom}-${s.yearTo} гг. • ` : ''}
-                        {s.priceRubFrom && s.priceRubTo 
-                          ? `${(s.priceRubFrom / 1000000).toFixed(1)} - ${(s.priceRubTo / 1000000).toFixed(1)} млн ₽`
-                          : 'Любая цена'
-                        }
-                      </p>
+                      <div className="text-[10px] text-slate-500 font-mono mt-0.5 space-y-0.5">
+                        {(s.yearFrom || s.yearTo) && (
+                          <div>📅 {s.yearFrom || '...'} - {s.yearTo || '...'} гг.</div>
+                        )}
+                        {(s.priceRubFrom || s.priceRubTo) ? (
+                          <div>💰 {s.priceRubFrom ? (s.priceRubFrom / 1000000).toFixed(1) : '...'} - {s.priceRubTo ? (s.priceRubTo / 1000000).toFixed(1) : '...'} млн ₽</div>
+                        ) : (
+                          <div>💰 Любая цена</div>
+                        )}
+                        {(s.engineVolumeFrom || s.engineVolumeTo) && (
+                          <div>⚙️ {s.engineVolumeFrom || '...'} - {s.engineVolumeTo || '...'} л</div>
+                        )}
+                        {(s.powerFrom || s.powerTo) && (
+                          <div>⚡ {s.powerFrom || '...'} - {s.powerTo || '...'} л.с.</div>
+                        )}
+                        {s.fuelType && <div>⛽ {s.fuelType}</div>}
+                        {s.gearbox && <div>🔧 {s.gearbox}</div>}
+                        {s.driveType && <div>🚗 {s.driveType}</div>}
+                        {s.wheelPosition && <div>🎯 {s.wheelPosition}</div>}
+                        {s.color && <div>🎨 {s.color}</div>}
+                        {s.country && <div>🌍 {s.country}</div>}
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={onOpenFilters}
+                      onClick={() => onEditSubscription(s.id)}
                       className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-3 rounded-lg font-medium transition"
                     >
                       Изменить

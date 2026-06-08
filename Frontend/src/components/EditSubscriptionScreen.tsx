@@ -1,26 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { SearchFilters, Car } from '../types';
+import React, { useState } from 'react';
+import { ArrowLeft, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { Subscription } from '../types';
 
-interface FiltersScreenProps {
-  initialFilters: SearchFilters;
+interface EditSubscriptionScreenProps {
+  subscription: Subscription;
   onBack: () => void;
-  onApply: (filters: SearchFilters) => void;
-  catalog: Car[];
+  onSave: (updated: Subscription) => Promise<void> | void;
 }
 
-export default function FiltersScreen({
-  initialFilters,
+export default function EditSubscriptionScreen({
+  subscription,
   onBack,
-  onApply,
-  catalog
-}: FiltersScreenProps) {
-  const [filters, setFilters] = useState<SearchFilters>({ ...initialFilters });
-  
-  // Collapse states for filter dropdown section clusters
-  const [expandedSection, setExpandedSection] = useState<string | null>('engine');
+  onSave,
+}: EditSubscriptionScreenProps) {
+  // Local editing state initialized from the subscription
+  const [make] = useState(subscription.make);
+  const [model] = useState(subscription.model);
+  const [condition, setCondition] = useState<'all' | 'new' | 'used'>(
+    (subscription.condition as 'all' | 'new' | 'used') || 'all'
+  );
+  const [yearFrom, setYearFrom] = useState(subscription.yearFrom?.toString() || '');
+  const [yearTo, setYearTo] = useState(subscription.yearTo?.toString() || '');
+  const [priceFrom, setPriceFrom] = useState(
+    subscription.priceRubFrom ? (subscription.priceRubFrom / 1000000).toString() : ''
+  );
+  const [priceTo, setPriceTo] = useState(
+    subscription.priceRubTo ? (subscription.priceRubTo / 1000000).toString() : ''
+  );
+  const [engineVolumeFrom, setEngineVolumeFrom] = useState(
+    subscription.engineVolumeFrom?.toString() || ''
+  );
+  const [engineVolumeTo, setEngineVolumeTo] = useState(
+    subscription.engineVolumeTo?.toString() || ''
+  );
+  const [powerFrom, setPowerFrom] = useState(subscription.powerFrom?.toString() || '');
+  const [powerTo, setPowerTo] = useState(subscription.powerTo?.toString() || '');
+  const [fuelType, setFuelType] = useState(subscription.fuelType || 'Все виды');
+  const [gearbox, setGearbox] = useState(subscription.gearbox || 'Все коробки');
+  const [driveType, setDriveType] = useState(subscription.driveType || 'Все приводы');
+  const [wheelPosition, setWheelPosition] = useState(subscription.wheelPosition || 'Все варианты');
+  const [color, setColor] = useState(subscription.color || 'Все цвета');
 
-  // Multi-option catalog choices
+  const [expandedSection, setExpandedSection] = useState<string | null>('engine');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Multi-option catalog choices (same as FiltersScreen)
   const FUEL_TYPES = ['Все виды', 'бензин', 'дизель', 'гибрид', 'электро'];
   const GEARBOX_TYPES = ['Все коробки', 'автомат', 'робот', 'механика'];
   const DRIVETRAIN_TYPES = ['Все приводы', 'передний', 'задний', 'полный'];
@@ -31,63 +55,34 @@ export default function FiltersScreen({
     setExpandedSection(prev => prev === section ? null : section);
   };
 
-  const handleClearModel = () => {
-    setFilters(prev => ({ ...prev, model: '' }));
+  const handleSave = async () => {
+    setIsSaving(true);
+    const updated: Subscription = {
+      id: subscription.id,
+      make,
+      model,
+      yearFrom: yearFrom ? parseInt(yearFrom) : undefined,
+      yearTo: yearTo ? parseInt(yearTo) : undefined,
+      priceRubFrom: priceFrom ? parseFloat(priceFrom) * 1000000 : undefined,
+      priceRubTo: priceTo ? parseFloat(priceTo) * 1000000 : undefined,
+      engineVolumeFrom: engineVolumeFrom ? parseFloat(engineVolumeFrom) : undefined,
+      engineVolumeTo: engineVolumeTo ? parseFloat(engineVolumeTo) : undefined,
+      powerFrom: powerFrom ? parseInt(powerFrom) : undefined,
+      powerTo: powerTo ? parseInt(powerTo) : undefined,
+      fuelType: fuelType !== 'Все виды' ? fuelType : undefined,
+      gearbox: gearbox !== 'Все коробки' ? gearbox : undefined,
+      wheelPosition: wheelPosition !== 'Все варианты' ? wheelPosition : undefined,
+      driveType: driveType !== 'Все приводы' ? driveType : undefined,
+      color: color !== 'Все цвета' ? color : undefined,
+      country: subscription.country,
+      condition: condition !== 'all' ? condition : undefined,
+    };
+    try {
+      await onSave(updated);
+    } finally {
+      setIsSaving(false);
+    }
   };
-
-  const handleClearMake = () => {
-    setFilters(prev => ({ ...prev, make: '', model: '' }));
-  };
-
-  const handleConditionChange = (condition: 'all' | 'new' | 'used') => {
-    setFilters(prev => ({ ...prev, condition }));
-  };
-
-  // Live count filtering simulation based on active parameters
-  const [matchingCount, setMatchingCount] = useState(0);
-
-  useEffect(() => {
-    const matched = catalog.filter(car => {
-      // Make / Model checks
-      if (filters.make && car.make.toLowerCase() !== filters.make.toLowerCase()) return false;
-      if (filters.model && car.model.toLowerCase() !== filters.model.toLowerCase()) return false;
-
-      // Condition checking
-      if (filters.condition === 'new' && car.mileage > 100) return false;
-      if (filters.condition === 'used' && car.mileage <= 100) return false;
-
-      // Numerical range filterings
-      const numYearFrom = parseInt(filters.yearFrom) || 0;
-      const numYearTo = parseInt(filters.yearTo) || 9999;
-      if (car.year < numYearFrom || car.year > numYearTo) return false;
-
-      // Price range filterings
-      const numPriceFrom = parseFloat(filters.priceFrom) || 0;
-      const numPriceTo = parseFloat(filters.priceTo) || 9999;
-      const priceRubMillion = car.priceRub / 1000000;
-      if (priceRubMillion < numPriceFrom || priceRubMillion > numPriceTo) return false;
-
-      // Engine parameters
-      const numVolFrom = parseFloat(filters.engineVolumeFrom) || 0;
-      const numVolTo = parseFloat(filters.engineVolumeTo) || 99;
-      if (car.engineVolume < numVolFrom || car.engineVolume > numVolTo) return false;
-
-      const numHpFrom = parseInt(filters.powerFrom) || 0;
-      const numHpTo = parseInt(filters.powerTo) || 9999;
-      if (car.power < numHpFrom || car.power > numHpTo) return false;
-
-      // Categorical string matches
-      if (filters.fuelType !== 'Все виды' && car.fuelType !== filters.fuelType) return false;
-      if (filters.gearbox !== 'Все коробки' && car.gearbox !== filters.gearbox) return false;
-      if (filters.wheelPosition !== 'Все варианты' && car.wheelPosition !== filters.wheelPosition) return false;
-      if (filters.driveType !== 'Все приводы' && car.driveType !== filters.driveType) return false;
-      if (filters.color !== 'Все цвета' && car.color !== filters.color) return false;
-
-      return true;
-    });
-
-    setMatchingCount(matched.length);
-  }, [filters, catalog]);
 
   return (
     <div className="space-y-6 pb-24">
@@ -99,18 +94,21 @@ export default function FiltersScreen({
         >
           <ArrowLeft className="w-5 h-5 text-slate-800" />
         </button>
-        <span className="text-xl font-bold font-sans text-slate-850 tracking-tight">Параметры</span>
+        <div>
+          <span className="text-xl font-bold font-sans text-slate-850 tracking-tight">Редактирование подписки</span>
+          <p className="text-[11px] text-slate-400 font-mono">{make} {model}</p>
+        </div>
       </div>
 
-      {/* Condition Toggle Switches (Все, Новые, Поддержанные) */}
+      {/* Condition Toggle Switches */}
       <div className="bg-stone-100 p-1 rounded-xl grid grid-cols-3 gap-1">
         {(['all', 'new', 'used'] as const).map((type) => (
           <button
             key={type}
             type="button"
-            onClick={() => handleConditionChange(type)}
+            onClick={() => setCondition(type)}
             className={`py-2 px-1 text-center font-bold text-xs rounded-lg transition duration-150 ${
-              filters.condition === type
+              condition === type
                 ? 'bg-slate-990 text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
@@ -122,27 +120,15 @@ export default function FiltersScreen({
         ))}
       </div>
 
-      {/* Selected Brands / Models chips wrapper */}
-      {(filters.make || filters.model) && (
-        <div className="flex flex-wrap gap-2">
-          {filters.make && (
-            <div className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-2 text-xs font-bold shadow-sm">
-              <span>{filters.make}</span>
-              <button onClick={handleClearMake} className="hover:text-red-400 p-0.5">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-          {filters.model && (
-            <div className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-2 text-xs font-bold shadow-sm">
-              <span>{filters.model}</span>
-              <button onClick={handleClearModel} className="hover:text-red-400 p-0.5">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+      {/* Selected Brand / Model chips */}
+      <div className="flex flex-wrap gap-2">
+        <div className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-2 text-xs font-bold shadow-sm">
+          <span>{make}</span>
         </div>
-      )}
+        <div className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-2 text-xs font-bold shadow-sm">
+          <span>{model}</span>
+        </div>
+      </div>
 
       {/* Range filter inputs form */}
       <div className="space-y-4">
@@ -153,16 +139,16 @@ export default function FiltersScreen({
             <span className="text-xs text-slate-400 font-mono w-4">от</span>
             <input
               type="number"
-              value={filters.yearFrom}
-              onChange={(e) => setFilters(p => ({ ...p, yearFrom: e.target.value }))}
+              value={yearFrom}
+              onChange={(e) => setYearFrom(e.target.value)}
               placeholder="e.g. 2017"
               className="w-full bg-stone-100 rounded-xl px-4 py-3 text-sm outline-none text-slate-800 focus:bg-white border border-transparent focus:border-stone-200"
             />
             <span className="text-xs text-slate-400 font-mono w-4">до</span>
             <input
               type="number"
-              value={filters.yearTo}
-              onChange={(e) => setFilters(p => ({ ...p, yearTo: e.target.value }))}
+              value={yearTo}
+              onChange={(e) => setYearTo(e.target.value)}
               placeholder="e.g. 2026"
               className="w-full bg-stone-100 rounded-xl px-4 py-3 text-sm outline-none text-slate-800 focus:bg-white border border-transparent focus:border-stone-200"
             />
@@ -177,8 +163,8 @@ export default function FiltersScreen({
             <input
               type="number"
               step="0.1"
-              value={filters.priceFrom}
-              onChange={(e) => setFilters(p => ({ ...p, priceFrom: e.target.value }))}
+              value={priceFrom}
+              onChange={(e) => setPriceFrom(e.target.value)}
               placeholder="0.0"
               className="w-full bg-stone-100 rounded-xl px-4 py-3 text-sm outline-none text-slate-800 focus:bg-white border border-transparent focus:border-stone-200"
             />
@@ -186,15 +172,15 @@ export default function FiltersScreen({
             <input
               type="number"
               step="0.1"
-              value={filters.priceTo}
-              onChange={(e) => setFilters(p => ({ ...p, priceTo: e.target.value }))}
+              value={priceTo}
+              onChange={(e) => setPriceTo(e.target.value)}
               placeholder="5.5"
               className="w-full bg-stone-100 rounded-xl px-4 py-3 text-sm outline-none text-slate-800 focus:bg-white border border-transparent focus:border-stone-200"
             />
           </div>
         </div>
 
-        {/* Accordions for specific details with custom select states */}
+        {/* Accordions for specific details */}
         <div className="border border-slate-100 rounded-2xl divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
           {/* Engine Parameters */}
           <div className="p-4 space-y-3">
@@ -213,16 +199,16 @@ export default function FiltersScreen({
                   <input
                     type="number"
                     step="0.1"
-                    value={filters.engineVolumeFrom}
-                    onChange={(e) => setFilters(p => ({ ...p, engineVolumeFrom: e.target.value }))}
+                    value={engineVolumeFrom}
+                    onChange={(e) => setEngineVolumeFrom(e.target.value)}
                     placeholder="1.0"
                     className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
                   />
                   <input
                     type="number"
                     step="0.1"
-                    value={filters.engineVolumeTo}
-                    onChange={(e) => setFilters(p => ({ ...p, engineVolumeTo: e.target.value }))}
+                    value={engineVolumeTo}
+                    onChange={(e) => setEngineVolumeTo(e.target.value)}
                     placeholder="3.0"
                     className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
                   />
@@ -232,15 +218,15 @@ export default function FiltersScreen({
                   <span className="text-xs text-slate-400 font-mono w-14">Мощность л.с.</span>
                   <input
                     type="number"
-                    value={filters.powerFrom}
-                    onChange={(e) => setFilters(p => ({ ...p, powerFrom: e.target.value }))}
+                    value={powerFrom}
+                    onChange={(e) => setPowerFrom(e.target.value)}
                     placeholder="100"
                     className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
                   />
                   <input
                     type="number"
-                    value={filters.powerTo}
-                    onChange={(e) => setFilters(p => ({ ...p, powerTo: e.target.value }))}
+                    value={powerTo}
+                    onChange={(e) => setPowerTo(e.target.value)}
                     placeholder="300"
                     className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
                   />
@@ -256,7 +242,7 @@ export default function FiltersScreen({
               className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
             >
               <span>Тип топлива</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.fuelType}</span>
+              <span className="text-xs text-slate-400 font-mono">{fuelType}</span>
             </button>
 
             {expandedSection === 'fuel' && (
@@ -265,9 +251,9 @@ export default function FiltersScreen({
                   <button
                     key={fuel}
                     type="button"
-                    onClick={() => setFilters(p => ({ ...p, fuelType: fuel }))}
+                    onClick={() => setFuelType(fuel)}
                     className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.fuelType === fuel
+                      fuelType === fuel
                         ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
                         : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
                     }`}
@@ -286,7 +272,7 @@ export default function FiltersScreen({
               className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
             >
               <span>Коробка передач</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.gearbox}</span>
+              <span className="text-xs text-slate-400 font-mono">{gearbox}</span>
             </button>
 
             {expandedSection === 'gearbox' && (
@@ -295,9 +281,9 @@ export default function FiltersScreen({
                   <button
                     key={box}
                     type="button"
-                    onClick={() => setFilters(p => ({ ...p, gearbox: box }))}
+                    onClick={() => setGearbox(box)}
                     className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.gearbox === box
+                      gearbox === box
                         ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
                         : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
                     }`}
@@ -316,7 +302,7 @@ export default function FiltersScreen({
               className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
             >
               <span>Привод трансмиссии</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.driveType}</span>
+              <span className="text-xs text-slate-400 font-mono">{driveType}</span>
             </button>
 
             {expandedSection === 'drive' && (
@@ -325,9 +311,9 @@ export default function FiltersScreen({
                   <button
                     key={drive}
                     type="button"
-                    onClick={() => setFilters(p => ({ ...p, driveType: drive }))}
+                    onClick={() => setDriveType(drive)}
                     className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.driveType === drive
+                      driveType === drive
                         ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
                         : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
                     }`}
@@ -346,7 +332,7 @@ export default function FiltersScreen({
               className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
             >
               <span>Расположение руля</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.wheelPosition}</span>
+              <span className="text-xs text-slate-400 font-mono">{wheelPosition}</span>
             </button>
 
             {expandedSection === 'wheel' && (
@@ -355,9 +341,9 @@ export default function FiltersScreen({
                   <button
                     key={pos}
                     type="button"
-                    onClick={() => setFilters(p => ({ ...p, wheelPosition: pos }))}
+                    onClick={() => setWheelPosition(pos)}
                     className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.wheelPosition === pos
+                      wheelPosition === pos
                         ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
                         : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
                     }`}
@@ -376,7 +362,7 @@ export default function FiltersScreen({
               className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
             >
               <span>Цветовая гамма</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.color}</span>
+              <span className="text-xs text-slate-400 font-mono">{color}</span>
             </button>
 
             {expandedSection === 'color' && (
@@ -385,9 +371,9 @@ export default function FiltersScreen({
                   <button
                     key={col}
                     type="button"
-                    onClick={() => setFilters(p => ({ ...p, color: col }))}
+                    onClick={() => setColor(col)}
                     className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.color === col
+                      color === col
                         ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
                         : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
                     }`}
@@ -401,14 +387,15 @@ export default function FiltersScreen({
         </div>
       </div>
 
-      {/* Floating search match CTA button */}
+      {/* Floating Save CTA button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-100 shadow-xl max-w-sm mx-auto z-10">
         <button
-          onClick={() => onApply(filters)}
-          className="w-full bg-[#050b14] hover:bg-slate-800 text-white font-bold tracking-tight py-4 px-4 rounded-xl text-xs uppercase font-mono shadow-md flex items-center justify-center gap-2 transition"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full bg-[#050b14] hover:bg-slate-800 text-white font-bold tracking-tight py-4 px-4 rounded-xl text-xs uppercase font-mono shadow-md flex items-center justify-center gap-2 transition disabled:opacity-50"
         >
-          <Sliders className="w-3.5 h-3.5 text-sky-400" />
-          <span>Показать {matchingCount} объявлений</span>
+          <Save className="w-3.5 h-3.5 text-sky-400" />
+          <span>{isSaving ? 'Сохранение...' : 'Сохранить'}</span>
         </button>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from './services/api';
 import authService from './services/auth';
-import { Car, Order, Subscription, SearchFilters, AppView, UserRole, Checkpoint } from './types';
+import { Car, Order, Subscription, SearchFilters, AppView, UserRole } from './types';
 import telegram from './telegram';
 
 // Importing custom components
@@ -14,8 +14,8 @@ import CarDetailsScreen from './components/CarDetailsScreen';
 import OrderTrackerScreen from './components/OrderTrackerScreen';
 import CheckpointPhotoScreen from './components/CheckpointPhotoScreen';
 import SubscriptionsManager from './components/SubscriptionsManager';
+import EditSubscriptionScreen from './components/EditSubscriptionScreen';
 import AdminCRM from './components/AdminCRM';
-
 
 const DEFAULT_FILTERS: SearchFilters = {
   make: '',
@@ -59,17 +59,15 @@ export default function App() {
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<Checkpoint | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string | null>(null);
 
 
   // Load and populate data from API on initialization
   useEffect(() => {
-    console.log('App initialization started');
-
     const initializeApp = async () => {
       // Инициализация Telegram WebApp
       try {
         telegram.init();
-        console.log('Telegram init called');
       } catch (e) {
         console.error('Telegram init error:', e);
       }
@@ -77,7 +75,6 @@ export default function App() {
       // Проверка, что приложение запущено в Telegram
       if (telegram.isInTelegram()) {
         const user = telegram.getUser();
-        console.log('Telegram User:', user);
         setTelegramUser(user);
 
         // Применить тему Telegram
@@ -87,19 +84,29 @@ export default function App() {
         }
 
         // Аутентификация через Telegram
-        console.log('Starting authentication...');
         const authResult = await authService.authenticate();
 
         if (authResult?.success) {
-          console.log('Authentication successful:', authResult.user);
           setIsAuthenticated(true);
+
+          // Автоматическое определение роли из ответа аутентификации
+          if (authResult.user.role === 'MANAGER') {
+            setActiveRole('manager');
+          } else {
+            setActiveRole('client');
+          }
         } else {
           console.error('Authentication failed');
           setIsAuthenticated(false);
         }
       } else {
-        console.log('Not running in Telegram');
         setIsAuthenticated(false);
+
+        // В режиме разработки проверяем сохранённую роль
+        const savedRole = authService.getUserRole();
+        if (savedRole === 'MANAGER') {
+          setActiveRole('manager');
+        }
       }
 
       setIsAuthenticating(false);
@@ -123,12 +130,6 @@ export default function App() {
           api.subscriptions.getAll()
         ]);
 
-        console.log('Data loaded from API:', {
-          cars: carsData.length,
-          orders: ordersData.length,
-          subscriptions: subscriptionsData.length
-        });
-
         setCars(carsData);
         setOrders(ordersData);
         setSubscriptions(subscriptionsData);
@@ -141,7 +142,7 @@ export default function App() {
   }, [isAuthenticated]);
 
   // Sync state modifications to API automatically
-  const updatePersistedData = async (newCars: Car[], newOrders: Order[], newSubs: Subscription[]) => {
+  const updatePersistedData = (newCars: Car[], newOrders: Order[], newSubs: Subscription[]) => {
     setCars(newCars);
     setOrders(newOrders);
     setSubscriptions(newSubs);
@@ -180,8 +181,8 @@ export default function App() {
     const newSub = await api.subscriptions.create({
       make,
       model,
-      yearFrom: filters?.yearFrom ? parseInt(filters.yearFrom) : 2017,
-      yearTo: filters?.yearTo ? parseInt(filters.yearTo) : 2026,
+      yearFrom: filters?.yearFrom ? parseInt(filters.yearFrom) : undefined,
+      yearTo: filters?.yearTo ? parseInt(filters.yearTo) : undefined,
       priceRubFrom: filters?.priceFrom ? parseFloat(filters.priceFrom) * 1000000 : undefined,
       priceRubTo: filters?.priceTo ? parseFloat(filters.priceTo) * 1000000 : undefined,
       mileageFrom: undefined, // Пробег обычно не задаётся при подписке
@@ -219,6 +220,36 @@ export default function App() {
       const updatedSubs = subscriptions.filter(s => s.id !== id);
       updatePersistedData(cars, orders, updatedSubs);
     }
+  };
+
+  const handleUpdateSubscription = async (updated: Subscription) => {
+    const result = await api.subscriptions.update(updated.id, {
+      make: updated.make,
+      model: updated.model,
+      yearFrom: updated.yearFrom,
+      yearTo: updated.yearTo,
+      priceRubFrom: updated.priceRubFrom,
+      priceRubTo: updated.priceRubTo,
+      mileageFrom: updated.mileageFrom,
+      mileageTo: updated.mileageTo,
+      engineVolumeFrom: updated.engineVolumeFrom,
+      engineVolumeTo: updated.engineVolumeTo,
+      powerFrom: updated.powerFrom,
+      powerTo: updated.powerTo,
+      fuelType: updated.fuelType,
+      gearbox: updated.gearbox,
+      wheelPosition: updated.wheelPosition,
+      driveType: updated.driveType,
+      color: updated.color,
+      country: updated.country,
+      condition: updated.condition,
+    });
+    if (result) {
+      const updatedSubs = subscriptions.map(s => s.id === result.id ? result : s);
+      updatePersistedData(cars, orders, updatedSubs);
+    }
+    setActiveView('home');
+    setActiveTab('subscriptions');
   };
 
   const handlePlaceOrder = async (name: string, phone: string) => {
@@ -264,6 +295,10 @@ export default function App() {
               setActiveView('car-details');
             }}
             onOpenSubscriptions={() => setActiveView('subscriptions-list')}
+            onEditSubscription={(id) => {
+              setSelectedSubscriptionId(id);
+              setActiveView('edit-subscription');
+            }}
           />
         );
 
@@ -389,6 +424,24 @@ export default function App() {
           />
         );
 
+      case 'edit-subscription':
+        const editingSub = subscriptions.find(s => s.id === selectedSubscriptionId);
+        if (!editingSub) {
+          return (
+            <div className="text-center py-10 space-y-3">
+              <p className="text-sm text-slate-500">Подписка не найдена.</p>
+              <button onClick={() => setActiveView('home')} className="bg-slate-900 text-white rounded-lg px-4 py-2 text-xs">Домой</button>
+            </div>
+          );
+        }
+        return (
+          <EditSubscriptionScreen
+            subscription={editingSub}
+            onBack={() => setActiveView('home')}
+            onSave={handleUpdateSubscription}
+          />
+        );
+
       default:
         return <div>Элемент меню недоступен</div>;
     }
@@ -460,6 +513,20 @@ export default function App() {
                 onAddCar={handleAddCar}
                 onUpdateOrder={handleUpdateOrder}
                 onDeleteCar={handleDeleteCar}
+                onRefreshData={async () => {
+                  try {
+                    const [carsData, ordersData, subscriptionsData] = await Promise.all([
+                      api.cars.getAll(),
+                      api.orders.getAll(),
+                      api.subscriptions.getAll()
+                    ]);
+                    setCars(carsData);
+                    setOrders(ordersData);
+                    setSubscriptions(subscriptionsData);
+                  } catch (error) {
+                    console.error('Error refreshing data:', error);
+                  }
+                }}
               />
             </div>
           )}

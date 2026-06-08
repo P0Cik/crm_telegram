@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Bell, Sliders, AlertCircle, Heart, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Bell, Sliders, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Car, SearchFilters, Subscription } from '../types';
 
 interface ListingsScreenProps {

@@ -97,6 +97,7 @@ export type AppView =
   | 'order-tracking'
   | 'order-checkpoint-photo'
   | 'subscriptions-list'
+  | 'edit-subscription'
   | 'admin-dashboard';
 
 export type UserRole = 'client' | 'manager';

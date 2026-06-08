@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MessageCircle, AlertTriangle, ShieldAlert, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle, CheckCircle } from 'lucide-react';
 import { Checkpoint } from '../types';
 
 interface CheckpointPhotoScreenProps {

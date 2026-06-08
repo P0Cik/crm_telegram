@@ -36,7 +36,7 @@ services:
     container_name: crm_backend
     env_file: .env
     volumes:
-      - static:/backend_static
+      - backend_static:/app/backend_static
       - media:/app/media
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
@@ -72,6 +72,7 @@ services:
     env_file: .env
     volumes:
       - static:/staticfiles
+      - backend_static:/staticfiles/backend_static
     ports:
       - "8080:80"
     depends_on:
@@ -128,6 +129,7 @@ volumes:
   postgres_data:
   redis_data:
   static:
+  backend_static:
   media:
 
 networks:

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Bell, Plus, Trash2, MapPin, Search } from 'lucide-react';
+import { ArrowLeft, Bell, Plus, Trash2 } from 'lucide-react';
 import { Subscription } from '../types';
 
 interface SubscriptionsManagerProps {

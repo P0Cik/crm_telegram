@@ -118,8 +118,6 @@ const transformApiOrder = (apiOrder: ApiOrder): Order => {
 };
 
 const transformApiSubscription = (apiSub: ApiSubscription): Subscription => {
-  console.log('Transforming API subscription:', apiSub);
-
   const transformed = {
     id: apiSub.id.toString(),
     make: apiSub.brand?.name || '',
@@ -143,7 +141,6 @@ const transformApiSubscription = (apiSub: ApiSubscription): Subscription => {
     condition: apiSub.condition,
   };
 
-  console.log('Transformed subscription:', transformed);
   return transformed;
 };
 
@@ -166,17 +163,11 @@ export const api = {
   brands: {
     getAll: async (): Promise<Array<{ id: number; name: string }>> => {
       try {
-        console.log('Requesting brands from API...');
         const response = await apiClient.get('/brands/');
-        console.log('Brands API response:', response.data);
         const results = response.data.results || response.data;
-        console.log('Parsed brands:', results);
         return results;
       } catch (error) {
         console.error('Ошибка при загрузке брендов:', error);
-        if (error instanceof Error) {
-          console.error('Error details:', error.message);
-        }
         return [];
       }
     },
@@ -186,17 +177,11 @@ export const api = {
   models: {
     getAll: async (): Promise<Array<{ id: number; name: string; brand: { id: number; name: string } }>> => {
       try {
-        console.log('Requesting models from API...');
         const response = await apiClient.get('/models/');
-        console.log('Models API response:', response.data);
         const results = response.data.results || response.data;
-        console.log('Parsed models:', results);
         return results;
       } catch (error) {
         console.error('Ошибка при загрузке моделей:', error);
-        if (error instanceof Error) {
-          console.error('Error details:', error.message);
-        }
         return [];
       }
     },
@@ -217,7 +202,8 @@ export const api = {
     getAll: async (): Promise<Car[]> => {
       try {
         const response = await apiClient.get('/cars/');
-        return response.data.results.map(transformApiCar);
+        const results = response.data.results || response.data;
+        return Array.isArray(results) ? results.map(transformApiCar) : [];
       } catch (error) {
         console.error('Ошибка при загрузке автомобилей:', error);
         return [];
@@ -246,7 +232,8 @@ export const api = {
         if (filters.color && filters.color !== 'Все цвета') params.color = filters.color;
 
         const response = await apiClient.get('/cars/', { params });
-        return response.data.results.map(transformApiCar);
+        const results = response.data.results || response.data;
+        return Array.isArray(results) ? results.map(transformApiCar) : [];
       } catch (error) {
         console.error('Ошибка при поиске автомобилей:', error);
         return [];
@@ -288,7 +275,8 @@ export const api = {
     getAll: async (): Promise<Order[]> => {
       try {
         const response = await apiClient.get('/orders/');
-        return response.data.results.map(transformApiOrder);
+        const results = response.data.results || response.data;
+        return Array.isArray(results) ? results.map(transformApiOrder) : [];
       } catch (error) {
         console.error('Ошибка при загрузке заказов:', error);
         return [];
@@ -336,10 +324,8 @@ export const api = {
     getAll: async (): Promise<Subscription[]> => {
       try {
         const response = await apiClient.get('/search-requests/');
-        console.log('Raw API response for subscriptions:', response.data);
-        const transformed = response.data.results.map(transformApiSubscription);
-        console.log('Transformed subscriptions:', transformed);
-        return transformed;
+        const results = response.data.results || response.data;
+        return Array.isArray(results) ? results.map(transformApiSubscription) : [];
       } catch (error) {
         console.error('Ошибка при загрузке подписок:', error);
         return [];
@@ -351,10 +337,6 @@ export const api = {
         // Получаем все бренды и модели для поиска ID
         const brands = await api.brands.getAll();
         const models = await api.models.getAll();
-
-        console.log('Available brands:', brands);
-        console.log('Available models:', models);
-        console.log('Creating subscription for:', subscription);
 
         // Находим brand_id по названию
         const brand = brands.find(b => b.name.toLowerCase() === subscription.make.toLowerCase());
@@ -372,8 +354,6 @@ export const api = {
           console.error(`Модель "${subscription.model}" не найдена для бренда "${subscription.make}"`);
           return null;
         }
-
-        console.log('Found brand:', brand, 'model:', model);
 
         const requestData = {
           brand_id: brand.id,
@@ -397,15 +377,8 @@ export const api = {
           condition: subscription.condition,
         };
 
-        console.log('Sending request to backend:', requestData);
-
         const response = await apiClient.post('/search-requests/', requestData);
-
-        console.log('API response:', response.data);
-        const transformed = transformApiSubscription(response.data);
-        console.log('Transformed subscription:', transformed);
-
-        return transformed;
+        return transformApiSubscription(response.data);
       } catch (error) {
         console.error('Ошибка при создании подписки:', error);
         return null;
@@ -421,7 +394,129 @@ export const api = {
         return false;
       }
     },
+
+    update: async (id: string, subscription: Omit<Subscription, 'id'>): Promise<Subscription | null> => {
+      try {
+        // Получаем все бренды и модели для поиска ID
+        const brands = await api.brands.getAll();
+        const models = await api.models.getAll();
+
+        // Находим brand_id по названию
+        const brand = brands.find(b => b.name.toLowerCase() === subscription.make.toLowerCase());
+        if (!brand) {
+          console.error(`Бренд "${subscription.make}" не найден`);
+          return null;
+        }
+
+        // Находим model_id по названию и brand_id
+        const model = models.find(m =>
+          m.name.toLowerCase() === subscription.model.toLowerCase() &&
+          m.brand.id === brand.id
+        );
+        if (!model) {
+          console.error(`Модель "${subscription.model}" не найдена для бренда "${subscription.make}"`);
+          return null;
+        }
+
+        const requestData = {
+          brand_id: brand.id,
+          model_id: model.id,
+          year_min: subscription.yearFrom,
+          year_max: subscription.yearTo,
+          price_min: subscription.priceRubFrom,
+          price_max: subscription.priceRubTo,
+          mileage_min: subscription.mileageFrom,
+          mileage_max: subscription.mileageTo,
+          min_engine_volume: subscription.engineVolumeFrom,
+          max_engine_volume: subscription.engineVolumeTo,
+          min_engine_power: subscription.powerFrom,
+          max_engine_power: subscription.powerTo,
+          fuel_type: subscription.fuelType,
+          transmission: subscription.gearbox,
+          steering_wheel: subscription.wheelPosition,
+          drive_type: subscription.driveType,
+          colors: subscription.color,
+          country: subscription.country,
+          condition: subscription.condition,
+        };
+
+        const response = await apiClient.patch(`/search-requests/${id}/`, requestData);
+        return transformApiSubscription(response.data);
+      } catch (error) {
+        console.error('Ошибка при обновлении подписки:', error);
+        return null;
+      }
+    },
+  },
+
+  // Объявления
+  advertisements: {
+    getAll: async (): Promise<any[]> => {
+      try {
+        const response = await apiClient.get('/advertisements/');
+        return response.data.results || response.data;
+      } catch (error) {
+        console.error('Ошибка при загрузке объявлений:', error);
+        return [];
+      }
+    },
+
+    create: async (data: {
+      car_vin: string;
+      car_price: number;
+      mileage: number;
+      condition: string;
+    }): Promise<any | null> => {
+      try {
+        const response = await apiClient.post('/advertisements/', data);
+        return response.data;
+      } catch (error) {
+        console.error('Ошибка при создании объявления:', error);
+        return null;
+      }
+    },
+  },
+
+  // История статусов заказов
+  orderHistory: {
+    getForOrder: async (orderId: string): Promise<any[]> => {
+      try {
+        const response = await apiClient.get('/order-status-history/', {
+          params: { order: orderId }
+        });
+        return response.data.results || response.data;
+      } catch (error) {
+        console.error('Ошибка при загрузке истории заказа:', error);
+        return [];
+      }
+    },
+
+    create: async (data: {
+      order_id: number;
+      status: string;
+      media_file?: File;
+    }): Promise<any | null> => {
+      try {
+        const formData = new FormData();
+        formData.append('order_id', data.order_id.toString());
+        formData.append('status', data.status);
+        if (data.media_file) {
+          formData.append('media_file', data.media_file);
+        }
+
+        const response = await apiClient.post('/order-status-history/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        return response.data;
+      } catch (error) {
+        console.error('Ошибка при создании записи истории:', error);
+        return null;
+      }
+    },
   },
 };
 
 export default api;
+

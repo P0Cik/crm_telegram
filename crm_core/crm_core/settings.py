@@ -47,7 +47,6 @@ if DEBUG:
 if environ.get('CLOUDFLARE_TUNNEL'):
     CSRF_TRUSTED_ORIGINS.append(f"https://{environ.get('CLOUDFLARE_TUNNEL')}")
     CSRF_TRUSTED_ORIGINS.append(f"http://{environ.get('CLOUDFLARE_TUNNEL')}")
-q
 
 # Application definition
 

@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -210,10 +211,10 @@ class AdvertisementViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Автоматически устанавливаем пользователя как владельца объявления
+        Только менеджеры могут создавать объявления
         """
-        if self.request.user.role != User.Role.CLIENT:
-            raise permissions.PermissionDenied("Только клиенты могут создавать объявления")
+        if self.request.user.role != User.Role.MANAGER:
+            raise permissions.PermissionDenied("Только менеджеры могут создавать объявления")
         serializer.save()
 
     @action(detail=True, methods=['post'])
@@ -373,7 +374,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if user.role == User.Role.MANAGER:
             return Order.objects.select_related(
                 'user', 'car', 'car__brand', 'car__model', 'manager'
-            ).filter(manager=user)
+            ).all()
 
         return Order.objects.select_related(
             'user', 'car', 'car__brand', 'car__model', 'manager'
@@ -390,8 +391,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Необходима аутентификация через Telegram")
 
-        if user.role != User.Role.CLIENT:
-            raise permissions.PermissionDenied("Только клиенты могут создавать заказы")
+        if user.role != User.Role.MANAGER:
+            raise permissions.PermissionDenied("Только менеджеры могут создавать заказы")
 
         order = serializer.save()
 
@@ -488,6 +489,7 @@ class OrderStatusHistoryViewSet(viewsets.ModelViewSet):
     queryset = OrderStatusHistory.objects.select_related('order', 'updated_by').all()
     serializer_class = OrderStatusHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['order', 'status']
     ordering_fields = ['created_at']

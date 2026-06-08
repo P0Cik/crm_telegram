@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  Briefcase, Truck, Key, Layers, Package, User, PlusCircle, Check, 
-  Trash2, AlertTriangle, RefreshCcw, Landmark, FileText, CheckCircle2 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Briefcase, Package, PlusCircle,
+  Trash2, RefreshCcw, FileText, CheckCircle2,
+  Upload, Image, X, Search, ChevronLeft, Plus, Eye
 } from 'lucide-react';
-import { Car, Order, Subscription, OrderStatus, Checkpoint } from '../types';
+import { Car, Order, Subscription } from '../types';
+import api from '../services/api';
 
 interface AdminCRMProps {
   cars: Car[];
@@ -12,7 +14,30 @@ interface AdminCRMProps {
   onAddCar: (car: Car) => void;
   onUpdateOrder: (updatedOrder: Order) => void;
   onDeleteCar: (id: string) => void;
+  onRefreshData?: () => void;
 }
+
+// Маппинг статусов бэкенда для отображения
+const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  'PROCESSING': { label: 'В обработке', color: 'bg-yellow-100 text-yellow-800' },
+  'WAREHOUSE_KR': { label: 'Склад Корея', color: 'bg-blue-100 text-blue-800' },
+  'IN_TRANSIT_BORDER': { label: 'В пути на границу', color: 'bg-indigo-100 text-indigo-800' },
+  'AT_BORDER': { label: 'На границе', color: 'bg-purple-100 text-purple-800' },
+  'WAREHOUSE_RU': { label: 'Склад Россия', color: 'bg-cyan-100 text-cyan-800' },
+  'IN_TRANSIT_RU': { label: 'В пути по России', color: 'bg-teal-100 text-teal-800' },
+  'DELIVERED': { label: 'Доставлен', color: 'bg-green-100 text-green-800' },
+  'CANCELLED': { label: 'Отменён', color: 'bg-red-100 text-red-800' },
+};
+
+const STATUS_FLOW = [
+  'PROCESSING',
+  'WAREHOUSE_KR',
+  'IN_TRANSIT_BORDER',
+  'AT_BORDER',
+  'WAREHOUSE_RU',
+  'IN_TRANSIT_RU',
+  'DELIVERED',
+];
 
 export default function AdminCRM({
   cars,
@@ -20,522 +45,738 @@ export default function AdminCRM({
   subscriptions,
   onAddCar,
   onUpdateOrder,
-  onDeleteCar
+  onDeleteCar,
+  onRefreshData,
 }: AdminCRMProps) {
-  // Views inside CRM: 'orders-list' | 'add-car' | 'listings'
-  const [crmView, setCrmView] = useState<'orders-list' | 'add-car' | 'listings'>('orders-list');
+  type CrmViewType = 'orders-list' | 'order-detail' | 'create-order' | 'add-car' | 'listings' | 'advertisements';
+  const [crmView, setCrmView] = useState<CrmViewType>('orders-list');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // New Car form data states
-  const [newCar, setNewCar] = useState<Partial<Car>>({
-    make: 'BMW',
-    model: '3-series',
-    year: 2020,
-    priceWon: 31000000,
-    priceRub: 2150000,
-    images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=800'],
-    country: 'Корея',
-    dateAdded: '2026-06-02',
-    engineVolume: 2.0,
-    fuelType: 'бензин',
-    gearbox: 'автомат',
-    wheelPosition: 'левый',
-    driveType: 'задний',
-    color: 'черный',
-    mileage: 18000,
-    power: 184,
-    vin: 'WBA5A51000LJ03928',
-    isPopular: false
+  // Brands/Models from API
+  const [brands, setBrands] = useState<Array<{ id: number; name: string }>>([]);
+  const [models, setModels] = useState<Array<{ id: number; name: string; brand: { id: number; name: string } }>>([]);
+  const [filteredModels, setFilteredModels] = useState<Array<{ id: number; name: string }>>([]);
+
+  // New Car form
+  const [newCar, setNewCar] = useState({
+    vin: '', brand_id: 0, model_id: 0, year: 2024, fuel_type: 'PETROL',
+    engine_volume: 2.0, engine_power: 150, transmission: 'автомат',
+    steering_wheel: 'LEFT', drive_type: 'передний', color: 'черный', seller_country: 'Южная Корея',
   });
 
-  // Checkpoint adding form states
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
-  const [newCheckpointText, setNewCheckpointText] = useState('Прошел таможню Владивосток');
-  const [newCheckpointInspector, setNewCheckpointInspector] = useState('Чернов Роман Павлович');
-  const [newCheckpointPhoto, setNewCheckpointPhoto] = useState('https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=800');
+  // Advertisement form
+  const [advertisements, setAdvertisements] = useState<any[]>([]);
+  const [newAd, setNewAd] = useState({ car_vin: '', car_price: 2000000, mileage: 30000, condition: 'Отличное' });
+
+  // Order detail view
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Create order form
+  const [newOrderVin, setNewOrderVin] = useState('');
+  const [newOrderPrice, setNewOrderPrice] = useState(2000000);
+
+  // Photo upload for checkpoint (inside order detail)
+  const [historyStatus, setHistoryStatus] = useState<string>('PROCESSING');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Catalog search/filter
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogBrandFilter, setCatalogBrandFilter] = useState('');
+  const [catalogYearFrom, setCatalogYearFrom] = useState('');
+  const [catalogYearTo, setCatalogYearTo] = useState('');
 
   const showToast = (txt: string) => {
     setToastMessage(txt);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleCreateCar = (e: React.FormEvent) => {
+  // Load brands and models on mount
+  useEffect(() => {
+    const loadBrandsModels = async () => {
+      const [brandsData, modelsData] = await Promise.all([
+        api.brands.getAll(),
+        api.models.getAll(),
+      ]);
+      setBrands(brandsData);
+      setModels(modelsData);
+      if (brandsData.length > 0) {
+        setNewCar(prev => ({ ...prev, brand_id: brandsData[0].id }));
+        const filtered = modelsData.filter(m => m.brand.id === brandsData[0].id);
+        setFilteredModels(filtered);
+        if (filtered.length > 0) setNewCar(prev => ({ ...prev, model_id: filtered[0].id }));
+      }
+    };
+    loadBrandsModels();
+  }, []);
+
+  useEffect(() => {
+    if (crmView === 'advertisements') loadAdvertisements();
+  }, [crmView]);
+
+  const loadAdvertisements = async () => {
+    setIsLoading(true);
+    setAdvertisements(await api.advertisements.getAll());
+    setIsLoading(false);
+  };
+
+  const handleBrandChange = (brandId: number) => {
+    setNewCar(prev => ({ ...prev, brand_id: brandId, model_id: 0 }));
+    const filtered = models.filter(m => m.brand.id === brandId);
+    setFilteredModels(filtered);
+    if (filtered.length > 0) setNewCar(prev => ({ ...prev, model_id: filtered[0].id }));
+  };
+
+  // ===== Handlers =====
+  const handleCreateCar = async (e: React.FormEvent) => {
     e.preventDefault();
-    const carId = `car-${Date.now()}`;
-    const fullCar: Car = {
-      ...(newCar as Car),
-      id: carId,
-      images: newCar.images && newCar.images.length > 0 ? newCar.images : [
-        'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=800'
-      ]
-    };
-
-    onAddCar(fullCar);
-    showToast(`🚗 Автомобиль ${fullCar.make} ${fullCar.model} успешно добавлен в корейский каталог!`);
-    setCrmView('listings');
-
-    // Trigger alert checks
-    const matches = subscriptions.filter(s => 
-      s.make.toLowerCase() === fullCar.make.toLowerCase() && 
-      s.model.toLowerCase() === fullCar.model.toLowerCase()
-    );
-    if (matches.length > 0) {
-      alert(`🔔 СОВПАДЕНИЕ! Найден клиент на этот автомобиль! Бот симулирует уведомления в Telegram-канале.`);
-    }
+    if (!newCar.vin || newCar.vin.length !== 17) { showToast('❌ VIN должен содержать 17 символов'); return; }
+    setIsLoading(true);
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/cars/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
+        body: JSON.stringify({
+          vin: newCar.vin, brand_id: newCar.brand_id, model_id: newCar.model_id,
+          year: newCar.year, fuel_type: newCar.fuel_type, engine_volume: newCar.engine_volume,
+          engine_power: newCar.engine_power, transmission: newCar.transmission,
+          steering_wheel: newCar.steering_wheel, drive_type: newCar.drive_type,
+          color: newCar.color, seller_country: newCar.seller_country,
+        }),
+      });
+      if (resp.ok) { showToast('🚗 Автомобиль добавлен!'); onRefreshData?.(); setCrmView('listings'); }
+      else { const err = await resp.json(); showToast(`❌ ${JSON.stringify(err)}`); }
+    } catch { showToast('❌ Ошибка при создании'); }
+    setIsLoading(false);
   };
 
-  const handleChangeOrderStatus = (orderId: string, nextStatus: OrderStatus) => {
-    const ord = orders.find(o => o.id === orderId);
-    if (!ord) return;
-
-    // Define standard checkpoint texts for different steps
-    let automaticStatusText = 'Изменен статус заказа';
-    let automaticPhoto = 'https://images.unsplash.com/photo-1520105072000-f44fc083e54c?auto=format&fit=crop&q=80&w=800';
-
-    if (nextStatus === 'korea_warehouse') {
-      automaticStatusText = 'Автомобиль прибыл на консолидационный склад в Корее (Пусан)';
-      automaticPhoto = 'https://images.unsplash.com/photo-1520105072000-f44fc083e54c?auto=format&fit=crop&q=80&w=800';
-    } else if (nextStatus === 'shipping') {
-      automaticStatusText = 'Погружен на паром. Морской транзит в РФ';
-      automaticPhoto = 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=800';
-    } else if (nextStatus === 'delivered') {
-      automaticStatusText = 'Таможенная очистка пройдена. Автомобиль готов к выдаче клиенту';
-      automaticPhoto = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=800';
-    }
-
-    const newCheckpoint: Checkpoint = {
-      id: `cp-status-${Date.now()}`,
-      statusText: automaticStatusText,
-      date: 'Сегодня',
-      imageUrl: automaticPhoto,
-      inspectorName: 'Ли Сын У (Главный Логист)',
-      inspectionTime: new Date().toLocaleDateString('ru-RU') + ' ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-    };
-
-    const updated: Order = {
-      ...ord,
-      status: nextStatus,
-      checkpoints: [newCheckpoint, ...ord.checkpoints]
-    };
-
-    onUpdateOrder(updated);
-    showToast(`📦 Статус заказа №${orderId} изменен на "${nextStatus}". Добавлен фото-отчет!`);
-  };
-
-  const handleAddCheckpointToOrder = (e: React.FormEvent) => {
+  const handleCreateAdvertisement = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedOrderId) {
-      alert('Пожалуйста, выберите заказ.');
-      return;
-    }
-
-    const ord = orders.find(o => o.id === selectedOrderId);
-    if (!ord) return;
-
-    const newCp: Checkpoint = {
-      id: `cp-man-${Date.now()}`,
-      statusText: newCheckpointText,
-      date: 'Сегодня',
-      imageUrl: newCheckpointPhoto,
-      inspectorName: newCheckpointInspector,
-      inspectionTime: new Date().toLocaleDateString('ru-RU') + ' ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-    };
-
-    const updated: Order = {
-      ...ord,
-      checkpoints: [newCp, ...ord.checkpoints]
-    };
-
-    onUpdateOrder(updated);
-    showToast(`📸 Фото-отчет успешно добавлен к заказу №${selectedOrderId}!`);
-    setNewCheckpointText('');
+    setIsLoading(true);
+    const result = await api.advertisements.create(newAd);
+    if (result) {
+      showToast('📢 Объявление создано!');
+      loadAdvertisements();
+      const matchedCar = cars.find(c => c.vin === newAd.car_vin);
+      if (matchedCar) {
+        const matches = subscriptions.filter(s =>
+          s.make.toLowerCase() === matchedCar.make.toLowerCase() &&
+          s.model.toLowerCase() === matchedCar.model.toLowerCase()
+        );
+        if (matches.length > 0) showToast(`🔔 Найдено ${matches.length} совпадений с подписками!`);
+      }
+    } else showToast('❌ Ошибка');
+    setIsLoading(false);
   };
+
+  const handleChangeOrderStatus = async (orderId: string, nextStatus: string) => {
+    setIsLoading(true);
+    const result = await api.orders.updateStatus(orderId, nextStatus);
+    if (result) {
+      showToast(`📦 Статус изменён на "${ORDER_STATUS_MAP[nextStatus]?.label || nextStatus}"`);
+      onRefreshData?.();
+    } else showToast('❌ Ошибка');
+    setIsLoading(false);
+  };
+
+  const handleCreateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrderVin) { showToast('⚠️ Выберите автомобиль'); return; }
+    setIsLoading(true);
+    const result = await api.orders.create(newOrderVin, newOrderPrice);
+    if (result) {
+      showToast('✅ Заказ создан!');
+      onRefreshData?.();
+      setCrmView('orders-list');
+    } else showToast('❌ Ошибка при создании заказа');
+    setIsLoading(false);
+  };
+
+  // File handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearPhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleAddPhotoReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrderId) return;
+    setIsLoading(true);
+    const result = await api.orderHistory.create({
+      order_id: parseInt(selectedOrderId),
+      status: historyStatus,
+      media_file: photoFile || undefined,
+    });
+    if (result) { showToast('📸 Фото-отчёт добавлен!'); clearPhoto(); }
+    else showToast('❌ Ошибка');
+    setIsLoading(false);
+  };
+
+  const getBackendStatus = (order: Order): string => {
+    const map: Record<string, string> = {
+      'dealing': 'PROCESSING', 'korea_warehouse': 'WAREHOUSE_KR',
+      'shipping': 'IN_TRANSIT_BORDER', 'delivered': 'DELIVERED',
+    };
+    return map[order.status] || 'PROCESSING';
+  };
+
+  // Catalog filtering
+  const filteredCars = cars.filter(c => {
+    const searchLower = catalogSearch.toLowerCase();
+    const matchesSearch = !catalogSearch ||
+      c.make.toLowerCase().includes(searchLower) ||
+      c.model.toLowerCase().includes(searchLower) ||
+      c.vin.toLowerCase().includes(searchLower) ||
+      c.color.toLowerCase().includes(searchLower);
+    const matchesBrand = !catalogBrandFilter || c.make === catalogBrandFilter;
+    const matchesYearFrom = !catalogYearFrom || c.year >= parseInt(catalogYearFrom);
+    const matchesYearTo = !catalogYearTo || c.year <= parseInt(catalogYearTo);
+    return matchesSearch && matchesBrand && matchesYearFrom && matchesYearTo;
+  });
+
+  // Get unique brands from cars for filter
+  const uniqueBrands = [...new Set(cars.map(c => c.make))].sort();
+
+  // Selected order for detail view
+  const selectedOrder = orders.find(o => o.id === selectedOrderId);
+
+  // Check if we're in a sub-view (hide tabs)
+  const isSubView = crmView === 'order-detail' || crmView === 'create-order';
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Tab select header of CRM */}
-      <div className="flex bg-slate-900 text-white rounded-2xl p-2.5 items-center justify-between shadow border border-slate-800">
-        <div className="flex items-center gap-2">
-          <Briefcase className="w-5 h-5 text-sky-400" />
-          <span className="font-extrabold text-sm tracking-tight font-sans">Korea Auto CRM (Менеджер)</span>
+      {/* Tab header — hidden when in sub-view */}
+      {!isSubView && (
+        <div className="flex flex-col sm:flex-row bg-slate-900 text-white rounded-2xl p-2.5 items-center justify-between shadow border border-slate-800 gap-2">
+          <div className="flex items-center gap-2">
+            <Briefcase className="w-5 h-5 text-sky-400" />
+            <span className="font-extrabold text-sm tracking-tight font-sans">Korea Auto CRM</span>
+          </div>
+          <div className="flex flex-wrap bg-slate-800 p-1 rounded-xl gap-1">
+            {(['orders-list', 'add-car', 'advertisements', 'listings'] as CrmViewType[]).map(v => {
+              const labels: Record<string, string> = {
+                'orders-list': 'Заказы', 'add-car': '+ Авто', 'advertisements': 'Объявления', 'listings': 'Каталог',
+              };
+              return (
+                <button key={v} onClick={() => setCrmView(v)}
+                  className={`text-[10px] uppercase font-bold tracking-wider font-mono py-1.5 px-3 rounded-lg transition ${
+                    crmView === v ? 'bg-slate-700 text-sky-400' : 'text-slate-400 hover:text-white'
+                  }`}
+                >{labels[v]}</button>
+              );
+            })}
+          </div>
         </div>
+      )}
 
-        <div className="flex bg-slate-800 p-1 rounded-xl gap-1">
-          <button
-            onClick={() => setCrmView('orders-list')}
-            className={`text-[10px] uppercase font-bold tracking-wider font-mono py-1.5 px-3.5 rounded-lg transition ${
-              crmView === 'orders-list' ? 'bg-sky-505 bg-slate-700 text-sky-400' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Заказы
-          </button>
-          <button
-            onClick={() => setCrmView('add-car')}
-            className={`text-[10px] uppercase font-bold tracking-wider font-mono py-1.5 px-3.5 rounded-lg transition ${
-              crmView === 'add-car' ? 'bg-slate-700 text-sky-400' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            + Добавить авто
-          </button>
-          <button
-            onClick={() => setCrmView('listings')}
-            className={`text-[10px] uppercase font-bold tracking-wider font-mono py-1.5 px-3.5 rounded-lg transition ${
-              crmView === 'listings' ? 'bg-slate-700 text-sky-450 text-sky-450/100 text-sky-400' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Каталог
-          </button>
-        </div>
-      </div>
-
+      {/* Toast */}
       {toastMessage && (
         <div className="bg-emerald-900 border border-emerald-800 text-white px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* CRM Order Status and Checkpoint adding section */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-4">
+          <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-xs text-slate-500 ml-2">Загрузка...</span>
+        </div>
+      )}
+
+      {/* ===== ORDERS LIST ===== */}
       {crmView === 'orders-list' && (
         <div className="space-y-5">
-          {/* Active Orders List */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Управление заказами ({orders.length})</h3>
-
-            {orders.length === 0 ? (
-              <div className="bg-slate-50 border border-dashed text-center py-8 rounded-xl text-slate-500 text-xs">
-                Пока нет оформленных заказов. Сделайте заказ в каталоге!
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {orders.map((o) => (
-                  <div key={o.id} className="bg-white border border-slate-150 rounded-2xl p-4 shadow-sm space-y-3.5">
-                    <div className="flex justify-between items-start gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm text-slate-900">Заказ №{o.id}</span>
-                          <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold font-mono">
-                            {o.status.toUpperCase()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 font-sans mt-1">
-                          Клиент: <strong className="text-slate-700">{o.clientName}</strong> ({o.clientPhone})
-                        </p>
-                        <p className="text-[11px] text-slate-405 font-mono">Авто: {o.carDetails.make} {o.carDetails.model} ({o.carDetails.year})</p>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 uppercase font-mono block">К оплате в РФ</span>
-                        <span className="font-black text-slate-950 font-mono text-sm">{o.carDetails.priceRub.toLocaleString()} ₽</span>
-                      </div>
-                    </div>
-
-                    {/* Fast Status Change Actions */}
-                    <div className="pt-3 border-t border-slate-100 space-y-2">
-                      <span className="text-[10px] text-slate-405 font-mono uppercase font-black block">Сменить этап доставки (авто-генерация вехи в TG):</span>
-                      
-                      <div className="grid grid-cols-3 gap-1.5 font-sans">
-                        <button
-                          onClick={() => handleChangeOrderStatus(o.id, 'korea_warehouse')}
-                          className={`py-2 px-1 text-[10px] font-bold rounded-lg transition border ${
-                            o.status === 'korea_warehouse' 
-                              ? 'bg-sky-50 border-sky-400 text-sky-700' 
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          Склад Корея
-                        </button>
-                        <button
-                          onClick={() => handleChangeOrderStatus(o.id, 'shipping')}
-                          className={`py-2 px-1 text-[10px] font-bold rounded-lg transition border ${
-                            o.status === 'shipping' 
-                              ? 'bg-sky-50 border-sky-400 text-sky-700' 
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          В пути в РФ
-                        </button>
-                        <button
-                          onClick={() => handleChangeOrderStatus(o.id, 'delivered')}
-                          className={`py-2 px-1 text-[10px] font-bold rounded-lg transition border ${
-                            o.status === 'delivered' 
-                              ? 'bg-sky-50 border-sky-400 text-sky-700' 
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          Доставлен
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Заказы ({orders.length})</h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCrmView('create-order')}
+                className="flex items-center gap-1 bg-sky-500 hover:bg-sky-600 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg transition uppercase font-mono"
+              >
+                <Plus className="w-3 h-3" /> Новый заказ
+              </button>
+              {onRefreshData && (
+                <button onClick={onRefreshData} className="text-slate-400 hover:text-sky-500 transition p-1">
+                  <RefreshCcw className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Form to append manual checkpoint foto and inspector report */}
-          <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl space-y-4">
+          {orders.length === 0 ? (
+            <div className="bg-slate-50 border border-dashed text-center py-8 rounded-xl text-slate-500 text-xs">
+              Нет заказов
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {orders.map((o) => {
+                const bs = getBackendStatus(o);
+                const si = ORDER_STATUS_MAP[bs] || { label: o.status, color: 'bg-gray-100 text-gray-800' };
+                return (
+                  <button
+                    key={o.id}
+                    onClick={() => { setSelectedOrderId(o.id); setHistoryStatus(bs); setCrmView('order-detail'); }}
+                    className="w-full text-left bg-white border border-slate-150 rounded-2xl p-4 shadow-sm hover:border-sky-300 hover:shadow-md transition space-y-1"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-sm text-slate-900">Заказ №{o.id}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono ${si.color}`}>{si.label}</span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">Клиент: <strong className="text-slate-700">{o.clientName}</strong></p>
+                        <p className="text-[11px] text-slate-400 font-mono">{o.carDetails.make} {o.carDetails.model} ({o.carDetails.year})</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-[10px] text-slate-400 uppercase font-mono block">Сумма</span>
+                        <span className="font-black text-slate-950 font-mono text-sm">
+                          {o.carDetails.priceRub > 0 ? `${o.carDetails.priceRub.toLocaleString()} ₽` : '—'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-sky-500 font-semibold pt-1">
+                      <Eye className="w-3 h-3" /> Открыть
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== CREATE ORDER ===== */}
+      {crmView === 'create-order' && (
+        <div className="space-y-4">
+          <button onClick={() => setCrmView('orders-list')}
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-sky-500 transition font-semibold">
+            <ChevronLeft className="w-4 h-4" /> Назад к заказам
+          </button>
+
+          <div className="bg-white border border-slate-150 p-4 rounded-2xl shadow-sm space-y-4">
             <h3 className="font-bold text-sm text-slate-800 font-sans flex items-center gap-1.5">
-              <PlusCircle className="text-sky-500 w-4 h-4" /> Добавить кастомный фото-отчет
+              <PlusCircle className="text-sky-500 w-4 h-4" /> Создать заказ
             </h3>
 
-            <form onSubmit={handleAddCheckpointToOrder} className="space-y-3 text-xs font-sans">
+            <form onSubmit={handleCreateOrder} className="space-y-3 text-xs font-sans">
               <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Выберите Заказ</label>
-                <select
-                  required
-                  value={selectedOrderId}
-                  onChange={(e) => setSelectedOrderId(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-3 text-slate-800 outline-none"
-                >
-                  <option value="">-- Выбрать из списка --</option>
-                  {orders.map(o => (
-                    <option key={o.id} value={o.id}>№{o.id} ({o.clientName} - {o.carDetails.make} {o.carDetails.model})</option>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Автомобиль</label>
+                <select required value={newOrderVin} onChange={(e) => setNewOrderVin(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-3 outline-none">
+                  <option value="">-- Выберите авто --</option>
+                  {cars.map(c => (
+                    <option key={c.vin} value={c.vin}>{c.make} {c.model} ({c.year}) — {c.vin}</option>
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Статус/Лог операции</label>
-                <input
-                  type="text"
-                  required
-                  value={newCheckpointText}
-                  onChange={(e) => setNewCheckpointText(e.target.value)}
-                  placeholder="e.g. Успешно пройден таможенный осмотр в г. Находка"
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-3 outline-none"
-                />
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Сумма заказа (₽)</label>
+                <input type="number" required value={newOrderPrice}
+                  onChange={(e) => setNewOrderPrice(parseInt(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 outline-none" />
               </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">ФИО Эксперта</label>
-                  <input
-                    type="text"
-                    required
-                    value={newCheckpointInspector}
-                    onChange={(e) => setNewCheckpointInspector(e.target.value)}
-                    placeholder="e.g. Пак Мин Кю"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2.5"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Ссылка на фото ЛКП/Кузова</label>
-                  <select
-                    value={newCheckpointPhoto}
-                    onChange={(e) => setNewCheckpointPhoto(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2.5"
-                  >
-                    <option value="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=800">Customs Clearance Zone</option>
-                    <option value="https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&q=80&w=800">Inspection on road</option>
-                    <option value="https://images.unsplash.com/photo-1520105072000-f44fc083e54c?auto=format&fit=crop&q=80&w=800">Parking consolidation yard</option>
-                    <option value="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=800">Transportation Carrier Truck</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-3.5 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow"
-              >
-                Опубликовать веху в приложении
+              <button type="submit" disabled={isLoading}
+                className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-3.5 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow disabled:opacity-50">
+                {isLoading ? 'Создание...' : 'Создать заказ'}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* CRM New Stock Car addition view form */}
+      {/* ===== ORDER DETAIL ===== */}
+      {crmView === 'order-detail' && selectedOrder && (() => {
+        const bs = getBackendStatus(selectedOrder);
+        const si = ORDER_STATUS_MAP[bs] || { label: selectedOrder.status, color: 'bg-gray-100 text-gray-800' };
+        return (
+          <div className="space-y-5">
+            <button onClick={() => setCrmView('orders-list')}
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-sky-500 transition font-semibold">
+              <ChevronLeft className="w-4 h-4" /> Назад к заказам
+            </button>
+
+            {/* Order info card */}
+            <div className="bg-white border border-slate-150 rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-extrabold text-base text-slate-900">Заказ №{selectedOrder.id}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono ${si.color}`}>{si.label}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Клиент: <strong className="text-slate-700">{selectedOrder.clientName}</strong></p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    {selectedOrder.carDetails.make} {selectedOrder.carDetails.model} ({selectedOrder.carDetails.year})
+                  </p>
+                  <p className="text-[10px] text-slate-300 font-mono">VIN: {selectedOrder.carDetails.vin}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase font-mono block">Сумма</span>
+                  <span className="font-black text-slate-950 font-mono text-lg">
+                    {selectedOrder.carDetails.priceRub > 0 ? `${selectedOrder.carDetails.priceRub.toLocaleString()} ₽` : '—'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-mono">от {selectedOrder.dateCreated}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status change */}
+            <div className="bg-white border border-slate-150 rounded-2xl p-4 shadow-sm space-y-3">
+              <span className="text-[10px] text-slate-400 font-mono uppercase font-black block">Сменить этап доставки:</span>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 font-sans">
+                {STATUS_FLOW.map((st) => (
+                  <button key={st} onClick={() => handleChangeOrderStatus(selectedOrder.id, st)} disabled={isLoading}
+                    className={`py-2 px-1 text-[9px] font-bold rounded-lg transition border ${
+                      bs === st ? 'bg-sky-50 border-sky-400 text-sky-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}>
+                    {ORDER_STATUS_MAP[st]?.label || st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Photo report form */}
+            <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl space-y-4">
+              <h3 className="font-bold text-sm text-slate-800 font-sans flex items-center gap-1.5">
+                <PlusCircle className="text-sky-500 w-4 h-4" /> Добавить фото-отчёт
+              </h3>
+
+              <form onSubmit={handleAddPhotoReport} className="space-y-3 text-xs font-sans">
+                <div>
+                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Статус этапа</label>
+                  <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-3 text-slate-800 outline-none">
+                    {STATUS_FLOW.map(st => (
+                      <option key={st} value={st}>{ORDER_STATUS_MAP[st]?.label || st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Фото</label>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+
+                  {!photoPreview ? (
+                    <button type="button" onClick={() => fileInputRef.current?.click()}
+                      className="w-full border-2 border-dashed border-slate-300 rounded-xl py-6 flex flex-col items-center gap-2 hover:border-sky-400 hover:bg-sky-50/30 transition cursor-pointer">
+                      <Upload className="w-8 h-8 text-slate-400" />
+                      <span className="text-slate-500 text-xs">Нажмите для выбора фото</span>
+                      <span className="text-slate-400 text-[10px]">или сделайте снимок с камеры</span>
+                    </button>
+                  ) : (
+                    <div className="relative">
+                      <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-slate-200" />
+                      <button type="button" onClick={clearPhoto}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition">
+                        <X className="w-4 h-4" />
+                      </button>
+                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-lg flex items-center gap-1">
+                        <Image className="w-3 h-3" />{photoFile?.name}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button type="submit" disabled={isLoading}
+                  className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-3.5 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow disabled:opacity-50">
+                  {isLoading ? 'Загрузка...' : 'Опубликовать фото-отчёт'}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ===== ADD CAR ===== */}
       {crmView === 'add-car' && (
         <div className="bg-white border border-slate-150 p-4 rounded-2xl shadow-sm space-y-4">
-          <h3 className="font-bold text-sm text-slate-800 font-sans">Внесение автомобиля в Корейскую базу выкупа</h3>
-
+          <h3 className="font-bold text-sm text-slate-800 font-sans">Добавить автомобиль в базу</h3>
           <form onSubmit={handleCreateCar} className="space-y-3.5 text-xs font-sans">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Марка авто (e.g. BMW)</label>
-                <select
-                  value={newCar.make}
-                  onChange={(e) => setNewCar(p => ({ ...p, make: e.target.value, model: e.target.value === 'BMW' ? '3-series' : 'A4' }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5"
-                >
-                  <option value="BMW">BMW</option>
-                  <option value="Audi">Audi</option>
-                  <option value="Chevrolet">Chevrolet</option>
-                  <option value="Ford">Ford</option>
-                  <option value="Geely">Geely</option>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Марка</label>
+                <select value={newCar.brand_id} onChange={(e) => handleBrandChange(parseInt(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5">
+                  {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
-
               <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Модель (e.g. 1-series)</label>
-                <input
-                  type="text"
-                  required
-                  value={newCar.model || ''}
-                  onChange={(e) => setNewCar(p => ({ ...p, model: e.target.value }))}
-                  placeholder="3-series"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5"
-                />
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Модель</label>
+                <select value={newCar.model_id} onChange={(e) => setNewCar(p => ({ ...p, model_id: parseInt(e.target.value) }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5">
+                  {filteredModels.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
               </div>
             </div>
-
+            <div>
+              <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">VIN (17 символов)</label>
+              <input type="text" required maxLength={17} value={newCar.vin}
+                onChange={(e) => setNewCar(p => ({ ...p, vin: e.target.value.toUpperCase() }))}
+                placeholder="WBA1A1C35JK123456"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 font-mono uppercase" />
+              <span className={`text-[10px] mt-0.5 block ${newCar.vin.length === 17 ? 'text-green-500' : 'text-slate-400'}`}>
+                {newCar.vin.length}/17
+              </span>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Год выпуска</label>
-                <input
-                  type="number"
-                  required
-                  value={newCar.year || 2020}
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Год</label>
+                <input type="number" required value={newCar.year}
                   onChange={(e) => setNewCar(p => ({ ...p, year: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5"
-                />
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
               </div>
-
               <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Цена воны (₩)</label>
-                <input
-                  type="number"
-                  required
-                  value={newCar.priceWon || 25000000}
-                  onChange={(e) => setNewCar(p => ({ ...p, priceWon: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5"
-                />
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Двигатель (л)</label>
+                <input type="number" step="0.1" value={newCar.engine_volume}
+                  onChange={(e) => setNewCar(p => ({ ...p, engine_volume: parseFloat(e.target.value) }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
               </div>
-
               <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Цена рубли (₽)</label>
-                <input
-                  type="number"
-                  required
-                  value={newCar.priceRub || 1500000}
-                  onChange={(e) => setNewCar(p => ({ ...p, priceRub: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5"
-                />
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Мощность</label>
+                <input type="number" value={newCar.engine_power}
+                  onChange={(e) => setNewCar(p => ({ ...p, engine_power: parseInt(e.target.value) }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Пробег (км)</label>
-                <input
-                  type="number"
-                  required
-                  value={newCar.mileage || 29000}
-                  onChange={(e) => setNewCar(p => ({ ...p, mileage: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Номер кузова (VIN)</label>
-                <input
-                  type="text"
-                  required
-                  value={newCar.vin || ''}
-                  onChange={(e) => setNewCar(p => ({ ...p, vin: e.target.value }))}
-                  placeholder="WBA1A1..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 font-mono"
-                />
-              </div>
-            </div>
-
             <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Объем двигателя (литры)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={newCar.engineVolume || 1.5}
-                  onChange={(e) => setNewCar(p => ({ ...p, engineVolume: parseFloat(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Мощность (л.с.)</label>
-                <input
-                  type="number"
-                  value={newCar.power || 150}
-                  onChange={(e) => setNewCar(p => ({ ...p, power: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5"
-                />
-              </div>
-
               <div>
                 <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Топливо</label>
-                <select
-                  value={newCar.fuelType}
-                  onChange={(e) => setNewCar(p => ({ ...p, fuelType: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5"
-                >
-                  <option value="бензин">Бензин</option>
-                  <option value="дизель">Дизель</option>
-                  <option value="гибрид">Гибрид</option>
-                  <option value="электро">Электро</option>
+                <select value={newCar.fuel_type} onChange={(e) => setNewCar(p => ({ ...p, fuel_type: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
+                  <option value="PETROL">Бензин</option><option value="DIESEL">Дизель</option>
+                  <option value="HYBRID">Гибрид</option><option value="ELECTRIC">Электро</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Руль</label>
+                <select value={newCar.steering_wheel} onChange={(e) => setNewCar(p => ({ ...p, steering_wheel: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
+                  <option value="LEFT">Левый</option><option value="RIGHT">Правый</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Цвет</label>
+                <input type="text" value={newCar.color} onChange={(e) => setNewCar(p => ({ ...p, color: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Привод</label>
+                <select value={newCar.drive_type} onChange={(e) => setNewCar(p => ({ ...p, drive_type: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
+                  <option value="передний">Передний</option><option value="задний">Задний</option><option value="полный">Полный</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">КПП</label>
+                <select value={newCar.transmission} onChange={(e) => setNewCar(p => ({ ...p, transmission: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
+                  <option value="автомат">Автомат</option><option value="механика">Механика</option><option value="робот">Робот</option>
                 </select>
               </div>
             </div>
-
-            <div>
-              <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Изображение автомобиля (Unsplash URL)</label>
-              <select
-                onChange={(e) => setNewCar(p => ({ ...p, images: [e.target.value] }))}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5"
-              >
-                <option value="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=800">BMW Sedan (Dark)</option>
-                <option value="https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&q=80&w=800">BMW Sport hatchback (Grey)</option>
-                <option value="https://images.unsplash.com/photo-1606220838315-055d997b5337?auto=format&fit=crop&q=80&w=800">Audi Premium Hatch</option>
-                <option value="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=800">Porsche coupe style (Dark)</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-4 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow"
-            >
-              Добавить в корейскую базу
+            <button type="submit" disabled={isLoading}
+              className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-4 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow disabled:opacity-50">
+              {isLoading ? 'Сохранение...' : 'Добавить в базу'}
             </button>
           </form>
         </div>
       )}
 
-      {/* CRM Stock active listings catalog with deleting ability */}
+      {/* ===== ADVERTISEMENTS ===== */}
+      {crmView === 'advertisements' && (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-150 p-4 rounded-2xl shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-800 font-sans flex items-center gap-1.5">
+              <FileText className="text-sky-500 w-4 h-4" /> Создать объявление
+            </h3>
+            <form onSubmit={handleCreateAdvertisement} className="space-y-3 text-xs font-sans">
+              <div>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Автомобиль (VIN)</label>
+                <select required value={newAd.car_vin} onChange={(e) => setNewAd(p => ({ ...p, car_vin: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-3">
+                  <option value="">-- Выберите --</option>
+                  {cars.map(c => <option key={c.vin} value={c.vin}>{c.make} {c.model} ({c.year}) — {c.vin}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Цена (₽)</label>
+                  <input type="number" required value={newAd.car_price}
+                    onChange={(e) => setNewAd(p => ({ ...p, car_price: parseInt(e.target.value) }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Пробег (км)</label>
+                  <input type="number" required value={newAd.mileage}
+                    onChange={(e) => setNewAd(p => ({ ...p, mileage: parseInt(e.target.value) }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Состояние</label>
+                <select value={newAd.condition} onChange={(e) => setNewAd(p => ({ ...p, condition: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5">
+                  <option value="Отличное">Отличное</option><option value="Хорошее">Хорошее</option>
+                  <option value="Удовлетворительное">Удовлетворительное</option><option value="Требует ремонта">Требует ремонта</option>
+                </select>
+              </div>
+              <button type="submit" disabled={isLoading}
+                className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-3.5 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow disabled:opacity-50">
+                {isLoading ? 'Создание...' : 'Создать объявление'}
+              </button>
+            </form>
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Объявления ({advertisements.length})</h3>
+            {advertisements.length === 0 ? (
+              <div className="bg-slate-50 border border-dashed text-center py-8 rounded-xl text-slate-500 text-xs">Нет объявлений</div>
+            ) : (
+              <div className="space-y-2">
+                {advertisements.map((ad: any) => (
+                  <div key={ad.id} className="bg-white border border-slate-150 p-3 rounded-xl flex items-center justify-between shadow-sm">
+                    <div>
+                      <span className="font-bold text-slate-800 text-xs">
+                        {ad.car?.brand?.name || '?'} {ad.car?.model?.name || '?'} ({ad.car?.year || '?'})
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono block">
+                        VIN: {ad.car?.vin || ad.car_vin} • {ad.mileage?.toLocaleString()} км
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-sm text-slate-900 font-mono">{parseFloat(ad.car_price)?.toLocaleString()} ₽</span>
+                      <span className="text-[10px] text-slate-400 block">{ad.condition}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== CATALOG WITH SEARCH ===== */}
       {crmView === 'listings' && (
-        <div className="space-y-3 font-sans text-xs">
+        <div className="space-y-4 font-sans text-xs">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Каталог в наличии ({cars.length})</h3>
-            <span className="text-slate-450 text-[10px]">Кликните ведро для удаления</span>
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Каталог ({filteredCars.length}/{cars.length})</h3>
+            {onRefreshData && (
+              <button onClick={onRefreshData} className="text-slate-400 hover:text-sky-500 transition p-1">
+                <RefreshCcw className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          <div className="space-y-2">
-            {cars.map((c) => (
-              <div key={c.id} className="bg-white border border-slate-150 p-3 rounded-xl flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <img src={c.images[0]} alt="" className="w-10 h-7 rounded object-cover border border-slate-100" referrerPolicy="no-referrer" />
-                  <div>
-                    <span className="font-bold text-slate-800">{c.make} {c.model}</span>
-                    <span className="text-[10px] text-slate-450 font-mono block">Год: {c.year} • Пробег: {c.mileage.toLocaleString()} км</span>
-                  </div>
-                </div>
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={catalogSearch}
+              onChange={(e) => setCatalogSearch(e.target.value)}
+              placeholder="Поиск по марке, модели, VIN, цвету..."
+              className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:border-sky-400 transition"
+            />
+            {catalogSearch && (
+              <button onClick={() => setCatalogSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-[10px] text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded font-mono">{(c.priceWon/1000000).toFixed(1)} млн ₩</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onDeleteCar(c.id);
-                      showToast(`🗑️ Автомобиль ${c.make} ${c.model} удален из базы.`);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
-                    title="Удалить из каталога"
-                  >
+          {/* Filters row */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Марка</label>
+              <select value={catalogBrandFilter} onChange={(e) => setCatalogBrandFilter(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs outline-none">
+                <option value="">Все марки</option>
+                {uniqueBrands.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Год от</label>
+              <input type="number" value={catalogYearFrom} onChange={(e) => setCatalogYearFrom(e.target.value)}
+                placeholder="2018" className="w-full bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs outline-none" />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Год до</label>
+              <input type="number" value={catalogYearTo} onChange={(e) => setCatalogYearTo(e.target.value)}
+                placeholder="2025" className="w-full bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs outline-none" />
+            </div>
+          </div>
+
+          {/* Active filters */}
+          {(catalogBrandFilter || catalogYearFrom || catalogYearTo) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {catalogBrandFilter && (
+                <span className="bg-sky-50 text-sky-700 text-[10px] px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                  {catalogBrandFilter}
+                  <button onClick={() => setCatalogBrandFilter('')}><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {catalogYearFrom && (
+                <span className="bg-sky-50 text-sky-700 text-[10px] px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                  от {catalogYearFrom}
+                  <button onClick={() => setCatalogYearFrom('')}><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {catalogYearTo && (
+                <span className="bg-sky-50 text-sky-700 text-[10px] px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                  до {catalogYearTo}
+                  <button onClick={() => setCatalogYearTo('')}><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              <button onClick={() => { setCatalogBrandFilter(''); setCatalogYearFrom(''); setCatalogYearTo(''); setCatalogSearch(''); }}
+                className="text-[10px] text-slate-400 hover:text-red-500 underline">Сбросить все</button>
+            </div>
+          )}
+
+          {/* Cars list */}
+          {filteredCars.length === 0 ? (
+            <div className="bg-slate-50 border border-dashed text-center py-8 rounded-xl text-slate-500 text-xs">
+              {cars.length === 0 ? 'В базе нет автомобилей' : 'Нет результатов по фильтрам'}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredCars.map((c) => (
+                <div key={c.id} className="bg-white border border-slate-150 p-3 rounded-xl flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-7 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                      <Package className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-800">{c.make} {c.model}</span>
+                      <span className="text-[10px] text-slate-400 font-mono block">
+                        {c.year} • {c.engineVolume}л • {c.power}л.с. • {c.color}
+                      </span>
+                      <span className="text-[10px] text-slate-300 font-mono">VIN: {c.vin}</span>
+                    </div>
+                  </div>
+                  <button type="button"
+                    onClick={() => { onDeleteCar(c.id); showToast(`🗑️ ${c.make} ${c.model} удалён`); }}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition" title="Удалить">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

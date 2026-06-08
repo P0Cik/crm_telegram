@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ArrowLeft, Fuel, Sparkles } from 'lucide-react';
+import { Search, ArrowLeft } from 'lucide-react';
 
 interface MakesSelectorProps {
   onBack: () => void;
