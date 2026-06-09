@@ -5,7 +5,6 @@ from .models import (
     User,
     Car,
     CarPhoto,
-    Advertisement,
     SearchRequest,
     SearchProfile,
     Order,
@@ -96,9 +95,10 @@ class CarSerializer(serializers.ModelSerializer):
     fuel_type_display = serializers.SerializerMethodField()
     steering_wheel_display = serializers.SerializerMethodField()
     # Данные текущего объявления + фото — закрывают контракт фронтенда
-    price_won = serializers.SerializerMethodField()
-    price_rub = serializers.SerializerMethodField()
-    mileage = serializers.SerializerMethodField()
+    price_won = serializers.IntegerField(source='price_krw', read_only=True)
+    price_rub = serializers.DecimalField(source='car_price', max_digits=14, decimal_places=2, read_only=True)
+    mileage = serializers.IntegerField(read_only=True)
+    model_group = serializers.CharField(source='model.model_group', read_only=True)
     images = serializers.SerializerMethodField()
 
     class Meta:
@@ -115,30 +115,11 @@ class CarSerializer(serializers.ModelSerializer):
             'brand_id', 'model_id',
         ]
 
-    def _active_ad(self, obj):
-        ads = list(obj.advertisements.all())
-        active = [a for a in ads if a.is_active]
-        if active:
-            return active[0]
-        return ads[0] if ads else None
-
     def get_fuel_type_display(self, obj):
         return obj.get_fuel_type_display()
 
     def get_steering_wheel_display(self, obj):
         return obj.get_steering_wheel_display() if obj.steering_wheel else None
-
-    def get_price_won(self, obj):
-        ad = self._active_ad(obj)
-        return ad.price_krw if ad else None
-
-    def get_price_rub(self, obj):
-        ad = self._active_ad(obj)
-        return float(ad.car_price) if ad and ad.car_price else None
-
-    def get_mileage(self, obj):
-        ad = self._active_ad(obj)
-        return ad.mileage if ad else None
 
     def get_images(self, obj):
         return [p.url for p in obj.photos.all()]
@@ -150,20 +131,6 @@ class CarSerializer(serializers.ModelSerializer):
             )
         return data
 
-
-class AdvertisementSerializer(serializers.ModelSerializer):
-    car = CarSerializer(read_only=True)
-    car_id = serializers.PrimaryKeyRelatedField(
-        queryset=Car.objects.all(), source='car', write_only=True
-    )
-    publication_date = serializers.DateField(read_only=True)
-
-    class Meta:
-        model = Advertisement
-        fields = [
-            'id', 'car', 'car_id', 'external_id', 'price_krw', 'car_price',
-            'mileage', 'condition', 'is_active', 'publication_date'
-        ]
 
 
 class SearchRequestSerializer(serializers.ModelSerializer):
@@ -293,6 +260,5 @@ class OrderSerializer(serializers.ModelSerializer):
         validated_data.pop('car_vin', None)
         validated_data['user'] = self.context['request'].user
         if not validated_data.get('total_price'):
-            ad = validated_data['car'].advertisements.filter(is_active=True).first()
-            validated_data['total_price'] = (ad.car_price if ad else 0) or 0
+            validated_data['total_price'] = validated_data['car'].car_price or 0
         return super().create(validated_data)

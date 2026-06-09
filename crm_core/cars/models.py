@@ -92,10 +92,13 @@ class Car(models.Model):
     vin = models.CharField("VIN номер", max_length=17, null=True, blank=True, db_index=True)
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Марка')
     model = models.ForeignKey(Model, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Модель')
-    model_group = models.CharField('Группа модели', max_length=255, blank=True, default='')
     badge = models.CharField('Комплектация', max_length=255, blank=True, default='')
 
     # --- Характеристики ---
+    price_krw = models.BigIntegerField('Цена (KRW, воны)', null=True, blank=True)
+    car_price = models.DecimalField('Цена (RUB)', max_digits=14, decimal_places=2, default=0)
+    mileage = models.IntegerField('Пробег', default=0)
+    condition = models.TextField('Состояние автомобиля', blank=True, default='')
     year = models.IntegerField("Год выпуска", validators=[MinValueValidator(1900)])
     year_month = models.IntegerField("Год-месяц (YYYYMM)", null=True, blank=True)
     fuel_type = models.CharField("Тип топлива", max_length=20, choices=FuelType.choices, default=FuelType.OTHER)
@@ -136,7 +139,7 @@ class Car(models.Model):
 
     def __str__(self):
         brand = self.brand.name if self.brand else '?'
-        model = self.model.name if self.model else self.model_group or '?'
+        model = self.model.name if self.model else '?'
         return f"{brand} {model} ({self.year}) [{self.source}:{self.external_id}]"
 
 
@@ -163,25 +166,6 @@ class CarPhoto(models.Model):
         return self.path
 
 
-class Advertisement(models.Model):
-    """Объявление о продаже автомобиля (листинг источника: цена, пробег, состояние)."""
-    car = models.ForeignKey(Car, on_delete=models.CASCADE, verbose_name='Автомобиль', related_name='advertisements')
-    external_id = models.CharField('ID в источнике', max_length=64, blank=True, default='', db_index=True)
-    price_krw = models.BigIntegerField('Цена (KRW, воны)', null=True, blank=True)
-    car_price = models.DecimalField('Цена (RUB)', max_digits=14, decimal_places=2, default=0)
-    mileage = models.IntegerField('Пробег', default=0)
-    condition = models.TextField('Состояние автомобиля', blank=True, default='')
-    is_active = models.BooleanField('Активно', default=True)
-    publication_date = models.DateField('Дата публикации', auto_now_add=True)
-    vin = models.CharField('VIN номер', max_length=17, blank=True, default='')
-
-    class Meta:
-        verbose_name = 'Объявление'
-        verbose_name_plural = 'Объявления'
-        ordering = ['-publication_date']
-
-    def __str__(self):
-        return f"Объявление #{self.id} - {self.car}"
 
 
 class SearchRequest(models.Model):

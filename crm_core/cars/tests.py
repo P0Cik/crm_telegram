@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from cars.encar import mapper, normalization as norm, sync
 from cars.matching import car_matches_request, match_cars_to_subscriptions
-from cars.models import Advertisement, Brand, Car, Model, SearchRequest, User
+from cars.models import Brand, Car, Model, SearchRequest, User
 from cars.telegram_views import verify_telegram_data
 
 
@@ -82,9 +82,8 @@ class UpsertTests(TestCase):
         self.assertEqual(Car.objects.filter(source='encar', external_id='41651395').count(), 1)
         # цена и нормализация
         self.assertEqual(car1.fuel_type, 'DIESEL')
-        ad = car1.advertisements.first()
-        self.assertEqual(ad.price_krw, 58_200_000)
-        self.assertEqual(ad.mileage, 108736)
+        self.assertEqual(car1.price_krw, 58_200_000)
+        self.assertEqual(car1.mileage, 108736)
 
     def test_deactivate_stale(self):
         sync.upsert_from_list(mapper.parse_list_item(SAMPLE_ITEM))
@@ -103,8 +102,8 @@ class MatchingTests(TestCase):
         self.car = Car.objects.create(
             source='encar', external_id='1', brand=self.brand, model=self.model,
             year=2022, fuel_type='DIESEL', is_active=True,
+            car_price=3_000_000, mileage=100000,
         )
-        Advertisement.objects.create(car=self.car, car_price=3_000_000, mileage=100000, is_active=True)
 
     def _make_req(self, **kw):
         return SearchRequest.objects.create(user=self.user, status=SearchRequest.Status.TRACKED, **kw)

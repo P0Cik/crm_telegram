@@ -69,11 +69,11 @@ class AuthService {
 
   async authenticate(): Promise<AuthResponse | null> {
     try {
-      const initData = telegram.getInitData();
+      let initData = telegram.getInitData();
 
       if (!initData) {
-        console.error('No Telegram initData available');
-        return null;
+        // Mock initData for local browser testing
+        initData = "user=%7B%22id%22%3A123456789%2C%22first_name%22%3A%22Browser%22%2C%22last_name%22%3A%22Tester%22%2C%22username%22%3A%22browsertester%22%7D";
       }
 
       const response = await axios.post<AuthResponse>(

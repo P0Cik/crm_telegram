@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
 from .models import (
-    Brand, Model, User, Car, CarPhoto, Advertisement,
+    Brand, Model, User, Car, CarPhoto,
     SearchRequest, SearchProfile, Order, OrderStatusHistory,
 )
 
@@ -32,29 +32,17 @@ class CarPhotoInline(admin.TabularInline):
     fields = ['path', 'category', 'ordering']
 
 
-class AdvertisementInline(admin.TabularInline):
-    model = Advertisement
-    extra = 0
-    fields = ['price_krw', 'car_price', 'mileage', 'is_active', 'publication_date']
-    readonly_fields = ['publication_date']
-
 
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
-    list_display = ['id', 'brand', 'model', 'year', 'fuel_type', 'color',
+    list_display = ['id', 'brand', 'model', 'year', 'car_price', 'mileage', 'fuel_type', 'color',
                     'region', 'source', 'external_id', 'is_active']
     list_filter = ['source', 'is_active', 'brand', 'fuel_type', 'year']
     search_fields = ['vin', 'external_id', 'brand__name', 'model__name', 'badge']
     list_select_related = ['brand', 'model']
-    inlines = [AdvertisementInline, CarPhotoInline]
+    inlines = [CarPhotoInline]
     readonly_fields = ['first_seen_at', 'last_seen_at', 'detail_fetched_at', 'source_metadata']
 
-
-@admin.register(Advertisement)
-class AdvertisementAdmin(admin.ModelAdmin):
-    list_display = ['id', 'car', 'price_krw', 'car_price', 'mileage', 'is_active', 'publication_date']
-    list_filter = ['is_active', 'publication_date']
-    search_fields = ['car__vin', 'car__external_id']
 
 
 @admin.register(SearchRequest)

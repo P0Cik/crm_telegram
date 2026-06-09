@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, X, ChevronDown, ChevronUp, Sliders } from 'lucide-react';
 import { SearchFilters, Car } from '../types';
 
 interface FiltersScreenProps {
@@ -49,8 +49,8 @@ export default function FiltersScreen({
   useEffect(() => {
     const matched = catalog.filter(car => {
       // Make / Model checks
-      if (filters.make && car.make.toLowerCase() !== filters.make.toLowerCase()) return false;
-      if (filters.model && car.model.toLowerCase() !== filters.model.toLowerCase()) return false;
+      if (filters.make && !['Все марки', 'Любая марка', ''].includes(filters.make) && car.make.toLowerCase() !== filters.make.toLowerCase()) return false;
+      if (filters.model && !['Все модели', 'Любая модель', ''].includes(filters.model) && !car.model.toLowerCase().includes(filters.model.toLowerCase())) return false;
 
       // Condition checking
       if (filters.condition === 'new' && car.mileage > 100) return false;
@@ -65,23 +65,26 @@ export default function FiltersScreen({
       const numPriceFrom = parseFloat(filters.priceFrom) || 0;
       const numPriceTo = parseFloat(filters.priceTo) || 9999;
       const priceRubMillion = car.priceRub / 1000000;
-      if (priceRubMillion < numPriceFrom || priceRubMillion > numPriceTo) return false;
+      if (numPriceFrom > 0 && priceRubMillion < numPriceFrom) return false;
+      if (numPriceTo < 9999 && priceRubMillion > numPriceTo) return false;
 
       // Engine parameters
       const numVolFrom = parseFloat(filters.engineVolumeFrom) || 0;
       const numVolTo = parseFloat(filters.engineVolumeTo) || 99;
-      if (car.engineVolume < numVolFrom || car.engineVolume > numVolTo) return false;
+      if (numVolFrom > 0 && car.engineVolume < numVolFrom) return false;
+      if (numVolTo < 99 && car.engineVolume > numVolTo) return false;
 
       const numHpFrom = parseInt(filters.powerFrom) || 0;
       const numHpTo = parseInt(filters.powerTo) || 9999;
-      if (car.power < numHpFrom || car.power > numHpTo) return false;
+      if (numHpFrom > 0 && car.power < numHpFrom) return false;
+      if (numHpTo < 9999 && car.power > numHpTo) return false;
 
       // Categorical string matches
-      if (filters.fuelType !== 'Все виды' && car.fuelType !== filters.fuelType) return false;
-      if (filters.gearbox !== 'Все коробки' && car.gearbox !== filters.gearbox) return false;
-      if (filters.wheelPosition !== 'Все варианты' && car.wheelPosition !== filters.wheelPosition) return false;
-      if (filters.driveType !== 'Все приводы' && car.driveType !== filters.driveType) return false;
-      if (filters.color !== 'Все цвета' && car.color !== filters.color) return false;
+      if (filters.fuelType && filters.fuelType !== 'Все виды' && car.fuelType !== filters.fuelType) return false;
+      if (filters.gearbox && filters.gearbox !== 'Все коробки' && car.gearbox !== filters.gearbox) return false;
+      if (filters.wheelPosition && filters.wheelPosition !== 'Все варианты' && car.wheelPosition !== filters.wheelPosition) return false;
+      if (filters.driveType && filters.driveType !== 'Все приводы' && car.driveType !== filters.driveType) return false;
+      if (filters.color && filters.color !== 'Все цвета' && car.color !== filters.color) return false;
 
       return true;
     });

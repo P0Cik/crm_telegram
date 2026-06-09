@@ -62,7 +62,7 @@ def send_photo(user, photo_url: str, caption: str, parse_mode: str = "HTML") -> 
 # --- Готовые шаблоны уведомлений --------------------------------------------
 def _car_title(car):
     brand = car.brand.name if car.brand else "Авто"
-    model = car.model.name if car.model else (car.model_group or "")
+    model = car.model.name if car.model else ""
     return f"{brand} {model} ({car.year})".strip()
 
 
@@ -106,13 +106,11 @@ def send_subscription_notification(user, search_request):
 
 def send_matching_car_notification(user, car, search_request=None):
     """Уведомление о появлении подходящего под подписку автомобиля."""
-    ad = car.advertisements.filter(is_active=True).first()
     price = ""
-    if ad:
-        if ad.car_price:
-            price = f"💰 {ad.car_price:,.0f} ₽\n"
-        if ad.mileage:
-            price += f"📏 {ad.mileage:,} км\n"
+    if car.car_price:
+        price = f"💰 {car.car_price:,.0f} ₽\n"
+    if car.mileage:
+        price += f"📏 {car.mileage:,} км\n"
     caption = (
         f"🎉 Новое авто по вашей подписке!\n\n"
         f"🚗 <b>{_car_title(car)}</b>\n"

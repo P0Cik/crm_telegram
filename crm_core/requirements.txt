@@ -14,14 +14,14 @@ redis==5.0.3
 billiard==4.2.4
 kombu==5.6.2
 vine==5.1.0
-aiogram==3.7.0
-aiohttp==3.9.5
+aiogram>=3.13.0
+aiohttp>=3.9.5
 python-dateutil==2.9.0.post0
 sqlparse==0.5.5
 asgiref==3.11.1
 typing_extensions==4.15.0
 tzdata==2026.2
-pydantic_core
+
 packaging==26.2
 six==1.17.0
 click==8.4.1

@@ -11,7 +11,7 @@ import logging
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from ..models import Advertisement, Brand, Car, CarPhoto, Model
+from ..models import Brand, Car, CarPhoto, Model
 from . import mapper, normalization as norm
 
 logger = logging.getLogger(__name__)
@@ -67,8 +67,11 @@ def upsert_from_list(parsed: dict, source: str = SOURCE):
     car_defaults = {
         "brand": brand,
         "model": model,
-        "model_group": parsed["model_group"],
         "badge": parsed["badge"],
+        "price_krw": parsed["price_won"],
+        "car_price": parsed["price_rub"] or 0,
+        "mileage": parsed["mileage"],
+        "condition": parsed.get("sales_status", "") or "",
         "year": parsed["year"],
         "year_month": parsed["year_month"],
         "fuel_type": parsed["fuel_type"],
@@ -98,18 +101,7 @@ def upsert_from_list(parsed: dict, source: str = SOURCE):
     if parsed["photos"] and not car.photos.exists():
         _sync_photos(car, parsed["photos"])
 
-    Advertisement.objects.update_or_create(
-        car=car,
-        defaults={
-            "external_id": parsed["external_id"],
-            "price_krw": parsed["price_won"],
-            "car_price": parsed["price_rub"] or 0,
-            "mileage": parsed["mileage"],
-            "condition": parsed.get("sales_status", "") or "",
-            "is_active": True,
-            "vin": car.vin or "",
-        },
-    )
+
     return car, created
 
 
@@ -118,7 +110,7 @@ def apply_detail(car: Car, detail: dict):
     fields = {}
     if detail.get("vin"):
         fields["vin"] = detail["vin"]
-    for key in ("badge", "model_group", "fuel_type", "fuel_type_raw",
+    for key in ("badge", "fuel_type", "fuel_type_raw",
                 "transmission", "transmission_raw", "color", "color_raw",
                 "body_type", "description_ko"):
         val = detail.get(key)
@@ -140,6 +132,12 @@ def apply_detail(car: Car, detail: dict):
     modified = _aware(detail.get("modified_at"))
     if modified:
         fields["modified_at"] = modified
+
+    if detail.get("price_won") is not None:
+        fields["price_krw"] = detail["price_won"]
+        fields["car_price"] = detail.get("price_rub") or 0
+    if detail.get("mileage") is not None:
+        fields["mileage"] = detail["mileage"]
 
     # бренд/модель при необходимости
     if detail.get("brand_name") and detail.get("model_name"):
@@ -168,19 +166,7 @@ def apply_detail(car: Car, detail: dict):
     if detail.get("photos"):
         _sync_photos(car, detail["photos"], replace=True)
 
-    # цена/пробег из детали -> объявление (если в списке его ещё не было)
-    if detail.get("price_won") is not None or detail.get("mileage") is not None:
-        ad_defaults = {
-            "external_id": car.external_id,
-            "is_active": True,
-            "vin": car.vin or "",
-        }
-        if detail.get("price_won") is not None:
-            ad_defaults["price_krw"] = detail["price_won"]
-            ad_defaults["car_price"] = detail.get("price_rub") or 0
-        if detail.get("mileage") is not None:
-            ad_defaults["mileage"] = detail["mileage"]
-        Advertisement.objects.update_or_create(car=car, defaults=ad_defaults)
+
 
     return car
 
@@ -194,12 +180,11 @@ def deactivate_stale(brand_name: str, model_group: str, seen_external_ids, sourc
     if brand_name:
         qs = qs.filter(brand__name=brand_name)
     if model_group:
-        qs = qs.filter(model_group=model_group)
+        qs = qs.filter(model__model_group=model_group)
     qs = qs.exclude(external_id__in=list(seen_external_ids))
     count = 0
     for car in qs:
         car.is_active = False
         car.save(update_fields=["is_active"])
-        car.advertisements.update(is_active=False)
         count += 1
     return count

@@ -218,6 +218,16 @@ export const api = {
 
   // Автомобили
   cars: {
+    getFilters: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get('/cars/filters/');
+        return response.data;
+      } catch (error) {
+        console.error('Ошибка при загрузке фильтров:', error);
+        return null;
+      }
+    },
+
     getAll: async (): Promise<Car[]> => {
       try {
         const response = await apiClient.get('/cars/');
@@ -243,12 +253,35 @@ export const api = {
       try {
         const params: any = {};
 
-        if (filters.make) params.brand__name = filters.make;
-        if (filters.model) params.model__name = filters.model;
-        if (filters.yearFrom) params.year__gte = filters.yearFrom;
-        if (filters.yearTo) params.year__lte = filters.yearTo;
-        if (filters.fuelType && filters.fuelType !== 'Все виды') params.fuel_type = filters.fuelType;
-        if (filters.color && filters.color !== 'Все цвета') params.color = filters.color;
+        if (filters.make && !['Все марки', 'Любая марка', ''].includes(filters.make)) params.brand_name = filters.make;
+        if (filters.model && !['Все модели', 'Любая модель', ''].includes(filters.model)) params.model_name = filters.model;
+        if (filters.yearFrom) params.year_min = filters.yearFrom;
+        if (filters.yearTo) params.year_max = filters.yearTo;
+        if (filters.fuelType && filters.fuelType !== 'Все виды') {
+            const fuelMap: Record<string, string> = {
+                'бензин': 'PETROL',
+                'дизель': 'DIESEL',
+                'гибрид': 'HYBRID',
+                'электро': 'ELECTRIC',
+                'газ': 'LPG'
+            };
+            params.fuel_type = fuelMap[filters.fuelType.toLowerCase()] || filters.fuelType;
+        }
+        if (filters.color && filters.color !== 'Все цвета') {
+            const colorMap: Record<string, string> = {
+                'белый': 'Белый',
+                'черный': 'Чёрный',
+                'серый': 'Серый',
+                'синий': 'Синий',
+                'красный': 'Красный'
+            };
+            params.color = colorMap[filters.color.toLowerCase()] || filters.color;
+        }
+        if (filters.gearbox && filters.gearbox !== 'Все коробки') params.transmission = filters.gearbox;
+        if (filters.wheelPosition && filters.wheelPosition !== 'Все варианты') params.steering_wheel = filters.wheelPosition === 'левый' ? 'LEFT' : 'RIGHT';
+        if (filters.driveType && filters.driveType !== 'Все приводы') params.drive_type = filters.driveType;
+        if (filters.priceFrom) params.price_min = parseFloat(filters.priceFrom) * 1000000;
+        if (filters.priceTo) params.price_max = parseFloat(filters.priceTo) * 1000000;
 
         const response = await apiClient.get('/cars/', { params });
         const results = response.data.results || response.data;
@@ -353,30 +386,33 @@ export const api = {
 
     create: async (subscription: Omit<Subscription, 'id'>): Promise<Subscription | null> => {
       try {
-        // Получаем все бренды и модели для поиска ID
-        const brands = await api.brands.getAll();
-        const models = await api.models.getAll();
+        // Получаем фильтры для корректного непагинированного поиска ID
+        const filters = await api.cars.getFilters();
+        const brands = filters?.brands || [];
+        const models = filters?.models || [];
 
         // Находим brand_id по названию
-        const brand = brands.find(b => b.name.toLowerCase() === subscription.make.toLowerCase());
-        if (!brand) {
+        const isValidMake = subscription.make && !['Все марки', 'Любая марка', ''].includes(subscription.make);
+        const brand = isValidMake ? brands.find((b: any) => b.name.toLowerCase() === subscription.make.toLowerCase()) : undefined;
+        if (isValidMake && !brand) {
           console.error(`Бренд "${subscription.make}" не найден`);
           return null;
         }
 
         // Находим model_id по названию и brand_id
-        const model = models.find(m =>
+        const isValidModel = subscription.model && !['Все модели', 'Любая модель', ''].includes(subscription.model);
+        const model = (isValidModel && brand) ? models.find((m: any) =>
           m.name.toLowerCase() === subscription.model.toLowerCase() &&
-          m.brand.id === brand.id
-        );
-        if (!model) {
+          m.brand_id === brand.id
+        ) : undefined;
+        if (isValidModel && !model) {
           console.error(`Модель "${subscription.model}" не найдена для бренда "${subscription.make}"`);
           return null;
         }
 
         const requestData = {
-          brand_id: brand.id,
-          model_id: model.id,
+          brand_id: brand?.id,
+          model_id: model?.id,
           year_min: subscription.yearFrom,
           year_max: subscription.yearTo,
           price_min: subscription.priceRubFrom,
@@ -416,30 +452,33 @@ export const api = {
 
     update: async (id: string, subscription: Omit<Subscription, 'id'>): Promise<Subscription | null> => {
       try {
-        // Получаем все бренды и модели для поиска ID
-        const brands = await api.brands.getAll();
-        const models = await api.models.getAll();
+        // Получаем фильтры для корректного непагинированного поиска ID
+        const filters = await api.cars.getFilters();
+        const brands = filters?.brands || [];
+        const models = filters?.models || [];
 
         // Находим brand_id по названию
-        const brand = brands.find(b => b.name.toLowerCase() === subscription.make.toLowerCase());
-        if (!brand) {
+        const isValidMake = subscription.make && !['Все марки', 'Любая марка', ''].includes(subscription.make);
+        const brand = isValidMake ? brands.find((b: any) => b.name.toLowerCase() === subscription.make.toLowerCase()) : undefined;
+        if (isValidMake && !brand) {
           console.error(`Бренд "${subscription.make}" не найден`);
           return null;
         }
 
         // Находим model_id по названию и brand_id
-        const model = models.find(m =>
+        const isValidModel = subscription.model && !['Все модели', 'Любая модель', ''].includes(subscription.model);
+        const model = (isValidModel && brand) ? models.find((m: any) =>
           m.name.toLowerCase() === subscription.model.toLowerCase() &&
-          m.brand.id === brand.id
-        );
-        if (!model) {
+          m.brand_id === brand.id
+        ) : undefined;
+        if (isValidModel && !model) {
           console.error(`Модель "${subscription.model}" не найдена для бренда "${subscription.make}"`);
           return null;
         }
 
         const requestData = {
-          brand_id: brand.id,
-          model_id: model.id,
+          brand_id: brand?.id,
+          model_id: model?.id,
           year_min: subscription.yearFrom,
           year_max: subscription.yearTo,
           price_min: subscription.priceRubFrom,
@@ -468,33 +507,6 @@ export const api = {
     },
   },
 
-  // Объявления
-  advertisements: {
-    getAll: async (): Promise<any[]> => {
-      try {
-        const response = await apiClient.get('/advertisements/');
-        return response.data.results || response.data;
-      } catch (error) {
-        console.error('Ошибка при загрузке объявлений:', error);
-        return [];
-      }
-    },
-
-    create: async (data: {
-      car_vin: string;
-      car_price: number;
-      mileage: number;
-      condition: string;
-    }): Promise<any | null> => {
-      try {
-        const response = await apiClient.post('/advertisements/', data);
-        return response.data;
-      } catch (error) {
-        console.error('Ошибка при создании объявления:', error);
-        return null;
-      }
-    },
-  },
 
   // История статусов заказов
   orderHistory: {

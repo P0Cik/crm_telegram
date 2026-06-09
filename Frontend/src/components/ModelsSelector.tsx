@@ -1,32 +1,34 @@
 import React, { useState } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
 
+export interface ModelItem {
+  id: number;
+  name: string;
+  model_group?: string;
+  brand_id: number;
+  count: number;
+}
+
 interface ModelsSelectorProps {
   brand: string;
+  models: ModelItem[];
   onBack: () => void;
   onSelectModel: (model: string) => void;
   brandListingsCount: number;
 }
 
-const MODELS_DB: Record<string, string[]> = {
-  BMW: ['1-series', '2-series', '3-series', '4-series', '5-series', 'X5', 'X6', 'X7', 'i4'],
-  Audi: ['A3', 'A4', 'A5', 'A6', 'Q5', 'Q7', 'e-tron'],
-  Chevrolet: ['Bolt', 'Captiva', 'Equinox', 'Malibu', 'Spark', 'Trailblazer'],
-  Ford: ['EcoSport', 'Explorer', 'Focus', 'Kuga', 'Mustang', 'Ranger'],
-  Geely: ['Atlas', 'Coolray', 'Emgrand', 'Monjaro', 'Tugella']
-};
-
 export default function ModelsSelector({
   brand = 'BMW',
+  models = [],
   onBack,
   onSelectModel,
   brandListingsCount
 }: ModelsSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
   
-  const models = MODELS_DB[brand] || ['1-series', '2-series', '3-series', '4-series', '5-series'];
   const filteredModels = models.filter(m => 
-    m.toLowerCase().includes(searchQuery.toLowerCase())
+    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m.model_group && m.model_group.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -72,14 +74,24 @@ export default function ModelsSelector({
         ) : (
           filteredModels.map((model) => (
             <button
-              key={model}
-              onClick={() => onSelectModel(model)}
+              key={model.id}
+              onClick={() => onSelectModel(model.name)}
               className="w-full py-4 text-left font-bold text-slate-850 text-sm hover:text-sky-600 transition flex items-center justify-between group"
             >
-              <span>{model}</span>
-              <span className="w-5 h-5 rounded-full bg-stone-50 group-hover:bg-sky-50 flex items-center justify-center text-[10px] text-slate-400 group-hover:text-sky-600 font-black transition">
-                &gt;
-              </span>
+              <div className="flex flex-col">
+                <span>{model.name}</span>
+                {model.model_group && model.model_group !== model.name && (
+                  <span className="text-[10px] text-slate-400 font-normal">{model.model_group}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 font-mono">
+                  {model.count.toLocaleString()}
+                </span>
+                <span className="w-5 h-5 rounded-full bg-stone-50 group-hover:bg-sky-50 flex items-center justify-center text-[10px] text-slate-400 group-hover:text-sky-600 font-black transition">
+                  &gt;
+                </span>
+              </div>
             </button>
           ))
         )}

@@ -1,34 +1,70 @@
 import React, { useState } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
 
+export interface BrandItem {
+  id: number;
+  name: string;
+  name_ru?: string;
+  count: number;
+}
+
 interface MakesSelectorProps {
+  brands: BrandItem[];
   onBack: () => void;
   onSelectBrand: (brand: string) => void;
   totalListingsCount: number;
 }
 
-const BRANDS = [
-  { name: 'BMW', logo: '🇩🇪', count: 27788 },
-  { name: 'Audi', logo: '🇩🇪', count: 18940 },
-  { name: 'Chevrolet', logo: '🇺🇸', count: 15450 },
-  { name: 'Ford', logo: '🇺🇸', count: 12200 },
-  { name: 'Geely', logo: '🇨🇳', count: 9810 },
-  { name: 'Mercedes-Benz', logo: '🇩🇪', count: 34100 },
-  { name: 'Kia', logo: '🇰🇷', count: 58900 },
-  { name: 'Hyundai', logo: '🇰🇷', count: 64500 },
-  { name: 'Lexus', logo: '🇯🇵', count: 8700 },
-  { name: 'Genesis', logo: '🇰🇷', count: 19800 }
-];
+const getBrandLogo = (name: string): string => {
+  const logos: Record<string, string> = {
+    'BMW': '🇩🇪',
+    'Audi': '🇩🇪',
+    'Chevrolet': '🇺🇸',
+    'Ford': '🇺🇸',
+    'Geely': '🇨🇳',
+    'Mercedes-Benz': '🇩🇪',
+    'Kia': '🇰🇷',
+    'Hyundai': '🇰🇷',
+    'Lexus': '🇯🇵',
+    'Genesis': '🇰🇷',
+    'Toyota': '🇯🇵',
+    'Honda': '🇯🇵',
+    'Nissan': '🇯🇵',
+    'Porsche': '🇩🇪',
+    'Volkswagen': '🇩🇪',
+    'Volvo': '🇸🇪',
+    'Land Rover': '🇬🇧',
+    'Jaguar': '🇬🇧',
+    'Renault': '🇫🇷',
+    'Peugeot': '🇫🇷',
+    'Chery': '🇨🇳',
+    'Haval': '🇨🇳',
+    'Changan': '🇨🇳',
+    'Exeed': '🇨🇳',
+    'Omoda': '🇨🇳',
+    'Mazda': '🇯🇵',
+    'Subaru': '🇯🇵',
+    'Mitsubishi': '🇯🇵',
+    'Infiniti': '🇯🇵',
+    'MINI': '🇬🇧',
+    'Jeep': '🇺🇸',
+    'Cadillac': '🇺🇸',
+    'Tesla': '🇺🇸'
+  };
+  return logos[name] || '🚗';
+};
 
 export default function MakesSelector({
+  brands,
   onBack,
   onSelectBrand,
   totalListingsCount
 }: MakesSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredBrands = BRANDS.filter(b => 
-    b.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredBrands = brands.filter(b => 
+    b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (b.name_ru && b.name_ru.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -76,9 +112,9 @@ export default function MakesSelector({
               className="w-full py-4 flex items-center justify-between text-left group hover:bg-slate-20"
             >
               <div className="flex items-center gap-3.5">
-                <span className="text-xl select-none">{brand.logo}</span>
+                <span className="text-xl select-none">{getBrandLogo(brand.name)}</span>
                 <span className="font-bold text-slate-850 text-sm group-hover:text-sky-600 transition">
-                  {brand.name}
+                  {brand.name} {brand.name_ru ? <span className="text-xs text-slate-400 font-normal ml-1">({brand.name_ru})</span> : null}
                 </span>
               </div>
               <span className="text-xs text-slate-400 font-mono">

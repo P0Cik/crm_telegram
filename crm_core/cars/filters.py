@@ -15,15 +15,15 @@ class CarFilter(df.FilterSet):
     brand_name = df.CharFilter(field_name='brand__name', lookup_expr='iexact')
     model = df.NumberFilter(field_name='model_id')
     model_name = df.CharFilter(field_name='model__name', lookup_expr='icontains')
-    model_group = df.CharFilter(field_name='model_group', lookup_expr='iexact')
+    model_group = df.CharFilter(field_name='model__model_group', lookup_expr='iexact')
 
     year_min = df.NumberFilter(field_name='year', lookup_expr='gte')
     year_max = df.NumberFilter(field_name='year', lookup_expr='lte')
 
-    price_min = df.NumberFilter(method='filter_price_min')
-    price_max = df.NumberFilter(method='filter_price_max')
-    mileage_min = df.NumberFilter(method='filter_mileage_min')
-    mileage_max = df.NumberFilter(method='filter_mileage_max')
+    price_min = df.NumberFilter(field_name='car_price', lookup_expr='gte')
+    price_max = df.NumberFilter(field_name='car_price', lookup_expr='lte')
+    mileage_min = df.NumberFilter(field_name='mileage', lookup_expr='gte')
+    mileage_max = df.NumberFilter(field_name='mileage', lookup_expr='lte')
 
     fuel_type = df.CharFilter(field_name='fuel_type', lookup_expr='iexact')
     transmission = df.CharFilter(field_name='transmission', lookup_expr='icontains')
@@ -36,18 +36,3 @@ class CarFilter(df.FilterSet):
         model = Car
         fields = ['source', 'is_active', 'brand', 'model', 'fuel_type']
 
-    def filter_price_min(self, queryset, name, value):
-        return queryset.filter(advertisements__is_active=True,
-                               advertisements__car_price__gte=value).distinct()
-
-    def filter_price_max(self, queryset, name, value):
-        return queryset.filter(advertisements__is_active=True,
-                               advertisements__car_price__lte=value).distinct()
-
-    def filter_mileage_min(self, queryset, name, value):
-        return queryset.filter(advertisements__is_active=True,
-                               advertisements__mileage__gte=value).distinct()
-
-    def filter_mileage_max(self, queryset, name, value):
-        return queryset.filter(advertisements__is_active=True,
-                               advertisements__mileage__lte=value).distinct()

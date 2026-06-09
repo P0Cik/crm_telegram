@@ -24,7 +24,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from asgiref.sync import sync_to_async
 
-from cars.models import User, Order, SearchRequest, Car, Advertisement
+from cars.models import User, Order, SearchRequest, Car
 from django.conf import settings
 
 # Настройка логирования

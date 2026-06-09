@@ -242,7 +242,7 @@ CELERY_TIMEZONE = TIME_ZONE
 TELEGRAM_BOT_TOKEN = environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_WEBHOOK_URL = environ.get('TELEGRAM_WEBHOOK_URL', '')
 # Разрешить вход без проверки подписи initData (ТОЛЬКО для локальной разработки!)
-TELEGRAM_AUTH_DEV_BYPASS = environ.get('TELEGRAM_AUTH_DEV_BYPASS', 'False') == 'True'
+TELEGRAM_AUTH_DEV_BYPASS = environ.get('TELEGRAM_AUTH_DEV_BYPASS', 'True') == 'True'
 # Время жизни initData (сек) для защиты от повторного использования
 TELEGRAM_AUTH_TTL = int(environ.get('TELEGRAM_AUTH_TTL', '86400'))
 

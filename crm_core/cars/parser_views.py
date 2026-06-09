@@ -9,7 +9,7 @@ from django.conf import settings
 import json
 import logging
 
-from cars.models import Car, Advertisement, Brand, Model
+from cars.models import Car, Brand, Model
 
 logger = logging.getLogger(__name__)
 
@@ -95,20 +95,10 @@ def parser_webhook(request):
                         'color': car_data.get('color'),
                         'seller_country': car_data.get('seller_country', 'Южная Корея'),
                         'is_active': True,
-                    }
-                )
-
-                # Создаем или обновляем объявление
-                Advertisement.objects.update_or_create(
-                    car=car,
-                    defaults={
-                        'external_id': external_id,
                         'price_krw': car_data.get('price_won'),
                         'car_price': car_data.get('price_rub', 0),
                         'mileage': car_data.get('mileage', 0),
                         'condition': car_data.get('condition', ''),
-                        'is_active': True,
-                        'vin': car_data.get('vin') or '',
                     }
                 )
 
@@ -156,7 +146,6 @@ def parser_status(request):
     """
     try:
         total_cars = Car.objects.count()
-        total_ads = Advertisement.objects.count()
         recent_cars = Car.objects.order_by('-id')[:10]
 
         recent_data = [
@@ -172,7 +161,6 @@ def parser_status(request):
         return Response({
             'status': 'active',
             'total_cars': total_cars,
-            'total_advertisements': total_ads,
             'recent_cars': recent_data,
         })
 

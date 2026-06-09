@@ -11,7 +11,6 @@ from .models import (
     Brand,
     Model,
     Car,
-    Advertisement,
     SearchRequest,
     SearchProfile,
     Order,
@@ -22,7 +21,6 @@ from .serializers import (
     ModelSerializer,
     UserSerializer,
     CarSerializer,
-    AdvertisementSerializer,
     SearchRequestSerializer,
     SearchProfileSerializer,
     OrderSerializer,
@@ -142,14 +140,14 @@ class CarViewSet(viewsets.ModelViewSet):
     """
     queryset = (
         Car.objects.select_related('brand', 'model')
-        .prefetch_related('advertisements', 'photos')
+        .prefetch_related('photos')
         .all()
     )
     serializer_class = CarSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = CarFilter
-    search_fields = ['vin', 'brand__name', 'model__name', 'model_group', 'badge', 'color']
+    search_fields = ['vin', 'brand__name', 'model__name', 'model__model_group', 'badge', 'color']
     ordering_fields = ['year', 'engine_power', 'engine_volume', 'first_seen_at']
     ordering = ['-first_seen_at']
 
@@ -166,21 +164,23 @@ class CarViewSet(viewsets.ModelViewSet):
         Доступные значения фильтров для построения UI: марки, модели,
         типы топлива и диапазоны года/цены.
         """
-        from django.db.models import Min, Max
+        from django.db.models import Min, Max, Count, Q
 
         active = Car.objects.filter(is_active=True)
         brands = list(
-            Brand.objects.filter(car__in=active).distinct().values('id', 'name', 'name_ru')
+            Brand.objects.filter(car__is_active=True).distinct()
+            .annotate(count=Count('car', filter=Q(car__is_active=True)))
+            .values('id', 'name', 'name_ru', 'count')
+            .order_by('-count')
         )
         models = list(
-            Model.objects.filter(car__in=active).distinct()
-            .values('id', 'name', 'model_group', 'brand_id')
+            Model.objects.filter(car__is_active=True).distinct()
+            .annotate(count=Count('car', filter=Q(car__is_active=True)))
+            .values('id', 'name', 'model_group', 'brand_id', 'count')
+            .order_by('brand__name', '-count')
         )
         year_range = active.aggregate(min=Min('year'), max=Max('year'))
-        price_range = (
-            Advertisement.objects.filter(is_active=True, car__is_active=True)
-            .aggregate(min=Min('car_price'), max=Max('car_price'))
-        )
+        price_range = active.aggregate(min=Min('car_price'), max=Max('car_price'))
         fuel_types = [
             {'value': v, 'display': d} for v, d in Car.FuelType.choices
         ]
@@ -192,63 +192,6 @@ class CarViewSet(viewsets.ModelViewSet):
             'price_range': price_range,
         })
 
-
-class AdvertisementViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint для работы с объявлениями.
-    Все могут просматривать, только клиенты могут создавать свои объявления.
-    """
-    queryset = Advertisement.objects.select_related('car', 'car__brand', 'car__model').all()
-    serializer_class = AdvertisementSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = {
-        'car__brand': ['exact'],
-        'car__model': ['exact'],
-        'car__year': ['gte', 'lte'],
-        'car_price': ['gte', 'lte'],
-        'mileage': ['gte', 'lte'],
-    }
-    search_fields = ['car__vin', 'car__brand__name', 'car__model__name', 'condition']
-    ordering_fields = ['car_price', 'mileage', 'publication_date']
-    ordering = ['-publication_date']
-
-    def get_queryset(self):
-        """
-        Пользователи могут видеть все объявления, но редактировать только свои
-        """
-        return Advertisement.objects.select_related('car', 'car__brand', 'car__model').all()
-
-    def perform_create(self, serializer):
-        """
-        Только менеджеры могут создавать объявления
-        """
-        if self.request.user.role != User.Role.MANAGER:
-            raise permissions.PermissionDenied("Только менеджеры могут создавать объявления")
-        serializer.save()
-
-    @action(detail=True, methods=['post'])
-    def create_order(self, request, pk=None):
-        """
-        Создать заказ на основе объявления
-        """
-        advertisement = self.get_object()
-        user = request.user
-        
-        if user.role != User.Role.CLIENT:
-            return Response(
-                {'error': 'Только клиенты могут создавать заказы'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        order = Order.objects.create(
-            user=user,
-            car=advertisement.car,
-            total_price=advertisement.car_price
-        )
-        
-        serializer = OrderSerializer(order, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class SearchRequestViewSet(viewsets.ModelViewSet):

@@ -21,10 +21,8 @@ def _ci_eq(a, b) -> bool:
     return (a or "").strip().lower() == (b or "").strip().lower()
 
 
-def car_matches_request(car: Car, req: SearchRequest, ad=None) -> bool:
+def car_matches_request(car: Car, req: SearchRequest) -> bool:
     """Проверяет соответствие автомобиля фильтрам подписки."""
-    if ad is None:
-        ad = car.advertisements.filter(is_active=True).first()
 
     # Марка / модель
     if req.brand_id and car.brand_id != req.brand_id:
@@ -38,9 +36,9 @@ def car_matches_request(car: Car, req: SearchRequest, ad=None) -> bool:
     if req.year_max and (not car.year or car.year > req.year_max):
         return False
 
-    # Цена (RUB) и пробег — из активного объявления
-    price = ad.car_price if ad else None
-    mileage = ad.mileage if ad else None
+    # Цена (RUB) и пробег — из авто
+    price = car.car_price
+    mileage = car.mileage
     if req.price_min is not None and (price is None or price < req.price_min):
         return False
     if req.price_max is not None and (price is None or price > req.price_max):
@@ -103,7 +101,7 @@ def match_cars_to_subscriptions(car_ids, notifier=None):
     base_cars = (
         Car.objects.filter(id__in=list(car_ids), is_active=True)
         .select_related("brand", "model")
-        .prefetch_related("advertisements", "photos")
+        .prefetch_related("photos")
     )
 
     now = timezone.now()
