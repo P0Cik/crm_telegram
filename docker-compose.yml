@@ -35,6 +35,11 @@ services:
       dockerfile: Dockerfile
     container_name: crm_backend
     env_file: .env
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py seed_brands &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 crm_core.wsgi:application"
     volumes:
       - backend_static:/app/backend_static
       - media:/app/media

@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import time
 from urllib.parse import parse_qs
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -14,9 +15,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def verify_telegram_data(init_data: str, bot_token: str) -> dict:
+def verify_telegram_data(init_data: str, bot_token: str, ttl: int = 86400) -> dict:
     """
-    Верифицирует данные от Telegram WebApp
+    Верифицирует данные от Telegram WebApp (HMAC-SHA256) и проверяет свежесть
+    initData (auth_date в пределах ttl секунд).
     """
     try:
         # Парсим init_data
@@ -25,6 +27,9 @@ def verify_telegram_data(init_data: str, bot_token: str) -> dict:
         # Извлекаем hash
         received_hash = parsed_data.get('hash', [None])[0]
         if not received_hash:
+            return None
+        if not bot_token:
+            logger.warning("TELEGRAM_BOT_TOKEN не задан — проверка initData невозможна")
             return None
 
         # Создаем строку для проверки
@@ -50,10 +55,20 @@ def verify_telegram_data(init_data: str, bot_token: str) -> dict:
             hashlib.sha256
         ).hexdigest()
 
-        # Проверяем hash
-        if calculated_hash != received_hash:
+        # Проверяем hash (защита от подмены)
+        if not hmac.compare_digest(calculated_hash, received_hash):
             logger.warning("Telegram data verification failed: hash mismatch")
             return None
+
+        # Проверяем свежесть initData (защита от повторного использования)
+        auth_date = parsed_data.get('auth_date', [None])[0]
+        if auth_date:
+            try:
+                if ttl and (time.time() - int(auth_date)) > ttl:
+                    logger.warning("Telegram initData истёк (auth_date слишком старый)")
+                    return None
+            except (TypeError, ValueError):
+                pass
 
         # Парсим данные пользователя
         user_data = parsed_data.get('user', [None])[0]
@@ -83,19 +98,21 @@ def telegram_auth(request):
         )
 
     # Верифицируем данные
-    user_data = verify_telegram_data(init_data, settings.TELEGRAM_BOT_TOKEN)
+    user_data = verify_telegram_data(
+        init_data, settings.TELEGRAM_BOT_TOKEN,
+        ttl=getattr(settings, 'TELEGRAM_AUTH_TTL', 86400),
+    )
 
     if not user_data:
-        # В режиме разработки разрешаем без верификации
-        if settings.DEBUG:
-            logger.warning("Skipping Telegram verification in DEBUG mode")
-            # Пытаемся распарсить данные напрямую
+        # Обход проверки разрешён ТОЛЬКО явным флагом для локальной разработки
+        if getattr(settings, 'TELEGRAM_AUTH_DEV_BYPASS', False):
+            logger.warning("TELEGRAM_AUTH_DEV_BYPASS включён — пропуск проверки подписи")
             try:
                 parsed = parse_qs(init_data)
                 user_json = parsed.get('user', [None])[0]
                 if user_json:
                     user_data = json.loads(user_json)
-            except:
+            except Exception:
                 pass
 
         if not user_data:

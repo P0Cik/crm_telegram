@@ -3,6 +3,8 @@ djangorestframework
 djangorestframework-simplejwt
 django-cors-headers
 django-filter
+drf-spectacular
+httpx==0.27.2
 psycopg2-binary==2.9.12
 python-dotenv==1.0.1
 pillow==12.2.0

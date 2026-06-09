@@ -1,0 +1,1434 @@
+[
+  {
+    "manage": {
+      "dummy": true,
+      "dummyVehicleId": 42112263,
+      "reRegistered": false,
+      "webReserved": true,
+      "registDateTime": "2026-06-01T13:52:06",
+      "firstAdvertisedDateTime": "2026-06-01T16:49:18",
+      "modifyDateTime": "2026-06-01T16:49:19",
+      "subscribeCount": 2,
+      "viewCount": 540
+    },
+    "category": {
+      "type": "CAR",
+      "manufacturerCd": "012",
+      "manufacturerName": "BMW",
+      "modelCd": "095",
+      "modelName": "5시리즈 (G60)",
+      "gradeCd": "004",
+      "gradeName": "530i xDrive M 스포츠",
+      "gradeEnglishName": "530i xDrive M Sport",
+      "yearMonth": "202510",
+      "formYear": "2026",
+      "domestic": false,
+      "importType": "REGULAR_IMPORT",
+      "originPrice": 8900,
+      "manufacturerEnglishName": "BMW",
+      "modelGroupCd": "003",
+      "modelGroupName": "5시리즈",
+      "modelGroupEnglishName": "5-Series",
+      "gradeDetailCd": null,
+      "gradeDetailName": null,
+      "gradeDetailEnglishName": null,
+      "jatoVehicleId": 774775920251001,
+      "warranty": {
+        "userDefined": true,
+        "companyName": "BMW코리아",
+        "bodyMonth": 24,
+        "bodyMileage": 9999999,
+        "transmissionMonth": 36,
+        "transmissionMileage": 60000
+      }
+    },
+    "advertisement": {
+      "type": "CAR",
+      "price": 9490,
+      "status": "ADVERTISE",
+      "warrantyStyleColor": "WHITE",
+      "trust": ["HomeService", "Warranty"],
+      "hotMark": [13, 14, 15],
+      "oneLineText": "made.2025.07+no paint+tax100%+key 3ea+new car condition",
+      "salesStatus": null,
+      "directInspected": false,
+      "preVerified": true,
+      "extendWarranty": false,
+      "deemedExtendWarranty": false,
+      "homeService": true,
+      "meetGo": false,
+      "preDelivery": false,
+      "leaseRentInfo": null,
+      "encarPassType": "Y",
+      "encarPassCategoryType": "CLEAR",
+      "underBodyPhotos": [
+        {
+          "photoType": "UNDER_BODY",
+          "photoPath": "/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/eb5f48fc-1332-40e2-8a0c-961e12df22dd.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/eb5f48fc-1332-40e2-8a0c-961e12df22dd.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_FRONT_LEFT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/b3f21e3b-3a9f-4263-9285-00f65d4ac447.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/b3f21e3b-3a9f-4263-9285-00f65d4ac447.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_FRONT_RIGHT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/fbb097f9-e46b-410c-b617-cc7909fa909c.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/fbb097f9-e46b-410c-b617-cc7909fa909c.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_REAR_RIGHT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/ee8f00d0-6d68-467a-8988-5c57564acc73.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/ee8f00d0-6d68-467a-8988-5c57564acc73.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_REAR_LEFT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/8adca75e-024e-4c46-b602-2a9443278ef9.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car5/car25/insp/4024925/8adca75e-024e-4c46-b602-2a9443278ef9.jpg"
+        }
+      ],
+      "hasUnderBodyPhoto": true,
+      "advertisementType": "NORMAL",
+      "diagnosisCar": true
+    },
+    "contact": {
+      "userId": "allcar123",
+      "userType": "DEALER",
+      "no": "05062437498",
+      "address": "대구 동구",
+      "contactType": "MOBILE",
+      "isVerifyOwner": false,
+      "isOwnerPartner": true
+    },
+    "spec": {
+      "type": "CAR",
+      "mileage": 5112,
+      "displacement": 1998,
+      "transmissionName": "오토",
+      "fuelCd": "001",
+      "fuelName": "가솔린",
+      "colorName": "쥐색",
+      "customColor": null,
+      "seatCount": 5,
+      "tradeType": "D",
+      "tradeOwnerType": null,
+      "tradeCompanyName": null,
+      "bodyName": "중형차"
+    },
+    "photos": [
+      {
+        "code": "022",
+        "path": "/carpicture10/pic4210/42109751_022.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "003",
+        "path": "/carpicture10/pic4210/42109751_003.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "009",
+        "path": "/carpicture10/pic4210/42109751_009.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "017",
+        "path": "/carpicture10/pic4210/42109751_017.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "007",
+        "path": "/carpicture10/pic4210/42109751_007.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "015",
+        "path": "/carpicture10/pic4210/42109751_015.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "043",
+        "path": "/carpicture10/pic4210/42109751_043.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "004",
+        "path": "/carpicture10/pic4210/42109751_004.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "010",
+        "path": "/carpicture10/pic4210/42109751_010.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "006",
+        "path": "/carpicture10/pic4210/42109751_006.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "031",
+        "path": "/carpicture10/pic4210/42109751_031.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "033",
+        "path": "/carpicture10/pic4210/42109751_033.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "036",
+        "path": "/carpicture10/pic4210/42109751_036.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "024",
+        "path": "/carpicture10/pic4210/42109751_024.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "035",
+        "path": "/carpicture10/pic4210/42109751_035.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "044",
+        "path": "/carpicture10/pic4210/42109751_044.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "005",
+        "path": "/carpicture10/pic4210/42109751_005.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "001",
+        "path": "/carpicture10/pic4210/42109751_027.jpg",
+        "type": "DIAG2",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "002",
+        "path": "/carpicture10/pic4210/42109751_002.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "016",
+        "path": "/carpicture10/pic4210/42109751_016.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "018",
+        "path": "/carpicture10/pic4210/42109751_018.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "040",
+        "path": "/carpicture10/pic4210/42109751_040.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "020",
+        "path": "/carpicture10/pic4210/42109751_020.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "034",
+        "path": "/carpicture10/pic4210/42109751_034.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "032",
+        "path": "/carpicture10/pic4210/42109751_032.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "023",
+        "path": "/carpicture10/pic4210/42109751_023.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "041",
+        "path": "/carpicture10/pic4210/42109751_041.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "008",
+        "path": "/carpicture10/pic4210/42109751_008.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "042",
+        "path": "/carpicture10/pic4210/42109751_042.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "019",
+        "path": "/carpicture10/pic4210/42109751_019.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      },
+      {
+        "code": "021",
+        "path": "/carpicture10/pic4210/42109751_021.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-06-01T14:53:36",
+        "desc": null
+      }
+    ],
+    "options": {
+      "type": "CAR",
+      "standard": [
+        "001",
+        "004",
+        "005",
+        "006",
+        "007",
+        "008",
+        "010",
+        "014",
+        "015",
+        "017",
+        "019",
+        "020",
+        "021",
+        "022",
+        "023",
+        "024",
+        "026",
+        "027",
+        "030",
+        "031",
+        "032",
+        "033",
+        "034",
+        "035",
+        "051",
+        "055",
+        "056",
+        "057",
+        "058",
+        "059",
+        "063",
+        "072",
+        "075",
+        "077",
+        "078",
+        "079",
+        "081",
+        "082",
+        "083",
+        "084",
+        "085",
+        "086",
+        "087",
+        "088",
+        "092",
+        "093",
+        "094",
+        "095",
+        "096",
+        "097"
+      ],
+      "etc": [],
+      "choice": [],
+      "tuning": []
+    },
+    "condition": {
+      "accident": { "recordView": true, "resumeView": true },
+      "inspection": { "formats": ["TABLE"] },
+      "seizing": { "seizingCount": 0, "pledgeCount": 0 }
+    },
+    "partnership": {
+      "brand": null,
+      "testdrive": { "active": false },
+      "dealer": {
+        "userId": "allcar123",
+        "name": "조민지",
+        "firm": {
+          "code": "3011",
+          "name": "올카모터스",
+          "diag2Partnered": true,
+          "diagnosisCenters": [
+            {
+              "code": "147",
+              "name": "엔카진단센터 대구 동구점",
+              "major": true,
+              "telephoneNumber": "053-965-8746",
+              "address": "대구 동구 반야월로 257"
+            },
+            {
+              "code": "193",
+              "name": "엔카진단센터 대구 동촌점",
+              "major": false,
+              "telephoneNumber": "053-983-5455",
+              "address": "대구 동구 방촌로 64 1층"
+            }
+          ],
+          "meetgoCenters": []
+        },
+        "visitReservation": false
+      },
+      "isPartneredVehicle": true,
+      "certifiedBrand": null,
+      "lease": null,
+      "rent": null
+    },
+    "contents": {
+      "text": "No paint  Tax100%  key3ea\nmade. 2025-07-18\nDocuments Ready for Immediate Deregistration\n\nNo paint , Tax100% , key3ea\nmade. 2025-07-18\nDocuments Ready for Immediate Deregistration\n\nNo paint , Tax100% , key3ea\nmade. 2025-07-18\nDocuments Ready for Immediate Deregistration\n\nPanoramic Glass Roof\nHarman Kardon Sound System\nFront Comfort Seats\nDriver Memory Seat\nFront Passenger Memory Seat\nFront Ventilated Seats\nHeated Steering Wheel\n4-Zone Automatic Climate Control\nDriving Assistant Professional\nSurround View Monitor (SVM)\nPower Tailgate\nAdaptive LED Headlamps\nM Sport Steering Wheel\nM Sport Brakes (Dark Blue)",
+      "meetGoText": null
+    },
+    "view": {
+      "encarDiagnosis": 2,
+      "encarMeetGo": 0,
+      "hasEvBatteryInfo": false,
+      "photoPlus": 2
+    },
+    "vehicleId": 42109751,
+    "vehicleType": "CAR",
+    "vin": "WBA51FJ02TCW09790",
+    "vehicleNo": "125누7206"
+  },
+  {
+    "manage": {
+      "dummy": true,
+      "dummyVehicleId": 42077865,
+      "reRegistered": false,
+      "webReserved": true,
+      "registDateTime": "2026-05-26T10:17:19",
+      "firstAdvertisedDateTime": "2026-05-26T16:57:28",
+      "modifyDateTime": "2026-05-26T16:57:28",
+      "subscribeCount": 1,
+      "viewCount": 694
+    },
+    "category": {
+      "type": "CAR",
+      "manufacturerCd": "012",
+      "manufacturerName": "BMW",
+      "modelCd": "095",
+      "modelName": "5시리즈 (G60)",
+      "gradeCd": "004",
+      "gradeName": "530i xDrive M 스포츠",
+      "gradeEnglishName": "530i xDrive M Sport",
+      "yearMonth": "202508",
+      "formYear": "2025",
+      "domestic": false,
+      "importType": "REGULAR_IMPORT",
+      "originPrice": 8900,
+      "manufacturerEnglishName": "BMW",
+      "modelGroupCd": "003",
+      "modelGroupName": "5시리즈",
+      "modelGroupEnglishName": "5-Series",
+      "gradeDetailCd": null,
+      "gradeDetailName": null,
+      "gradeDetailEnglishName": null,
+      "jatoVehicleId": 774775920250601,
+      "warranty": {
+        "userDefined": true,
+        "companyName": "BMW코리아",
+        "bodyMonth": 24,
+        "bodyMileage": 9999999,
+        "transmissionMonth": 36,
+        "transmissionMileage": 60000
+      }
+    },
+    "advertisement": {
+      "type": "CAR",
+      "price": 9290,
+      "status": "ADVERTISE",
+      "warrantyStyleColor": "WHITE",
+      "trust": ["HomeService", "Warranty"],
+      "hotMark": [13, 14, 15],
+      "oneLineText": "made.2025.06+no paint+tax100%+key 3ea+black seat",
+      "salesStatus": null,
+      "directInspected": false,
+      "preVerified": true,
+      "extendWarranty": false,
+      "deemedExtendWarranty": false,
+      "homeService": true,
+      "meetGo": false,
+      "preDelivery": false,
+      "leaseRentInfo": null,
+      "encarPassType": "Y",
+      "encarPassCategoryType": "CLEAR",
+      "underBodyPhotos": [
+        {
+          "photoType": "UNDER_BODY",
+          "photoPath": "/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/be073907-59eb-434a-a764-0fd0a70d58a8.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/be073907-59eb-434a-a764-0fd0a70d58a8.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_FRONT_LEFT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/b4bcd993-60eb-45a4-98ca-102b597526e7.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/b4bcd993-60eb-45a4-98ca-102b597526e7.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_FRONT_RIGHT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/175440be-5b85-4c0f-a36e-8fe0751e0b8d.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/175440be-5b85-4c0f-a36e-8fe0751e0b8d.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_REAR_RIGHT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/bdae79ba-15f1-49d9-ae00-707ac5b72ef8.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/bdae79ba-15f1-49d9-ae00-707ac5b72ef8.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_REAR_LEFT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/df1f4816-0fe6-43b7-836a-5685651b39ef.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car2/car72/insp/4003472/df1f4816-0fe6-43b7-836a-5685651b39ef.jpg"
+        }
+      ],
+      "hasUnderBodyPhoto": true,
+      "advertisementType": "NORMAL",
+      "diagnosisCar": true
+    },
+    "contact": {
+      "userId": "minfe92",
+      "userType": "DEALER",
+      "no": "05062330187",
+      "address": "대구 동구",
+      "contactType": "MOBILE",
+      "isVerifyOwner": false,
+      "isOwnerPartner": true
+    },
+    "spec": {
+      "type": "CAR",
+      "mileage": 7712,
+      "displacement": 1998,
+      "transmissionName": "오토",
+      "fuelCd": "001",
+      "fuelName": "가솔린",
+      "colorName": "검정색",
+      "customColor": null,
+      "seatCount": 5,
+      "tradeType": "D",
+      "tradeOwnerType": null,
+      "tradeCompanyName": null,
+      "bodyName": "중형차"
+    },
+    "photos": [
+      {
+        "code": "035",
+        "path": "/carpicture07/pic4207/42072800_035.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "006",
+        "path": "/carpicture07/pic4207/42072800_006.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "018",
+        "path": "/carpicture07/pic4207/42072800_018.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "023",
+        "path": "/carpicture07/pic4207/42072800_023.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "017",
+        "path": "/carpicture07/pic4207/42072800_017.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "043",
+        "path": "/carpicture07/pic4207/42072800_043.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "024",
+        "path": "/carpicture07/pic4207/42072800_024.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "031",
+        "path": "/carpicture07/pic4207/42072800_031.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "004",
+        "path": "/carpicture07/pic4207/42072800_004.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "016",
+        "path": "/carpicture07/pic4207/42072800_016.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "021",
+        "path": "/carpicture07/pic4207/42072800_021.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "034",
+        "path": "/carpicture07/pic4207/42072800_034.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "041",
+        "path": "/carpicture07/pic4207/42072800_041.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "009",
+        "path": "/carpicture07/pic4207/42072800_009.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "008",
+        "path": "/carpicture07/pic4207/42072800_008.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "020",
+        "path": "/carpicture07/pic4207/42072800_020.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "007",
+        "path": "/carpicture07/pic4207/42072800_007.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "002",
+        "path": "/carpicture07/pic4207/42072800_002.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "040",
+        "path": "/carpicture07/pic4207/42072800_040.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "010",
+        "path": "/carpicture07/pic4207/42072800_010.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "032",
+        "path": "/carpicture07/pic4207/42072800_032.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "005",
+        "path": "/carpicture07/pic4207/42072800_005.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "019",
+        "path": "/carpicture07/pic4207/42072800_019.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "042",
+        "path": "/carpicture07/pic4207/42072800_042.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "033",
+        "path": "/carpicture07/pic4207/42072800_033.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "036",
+        "path": "/carpicture07/pic4207/42072800_036.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "022",
+        "path": "/carpicture07/pic4207/42072800_022.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "003",
+        "path": "/carpicture07/pic4207/42072800_003.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "015",
+        "path": "/carpicture07/pic4207/42072800_015.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      },
+      {
+        "code": "001",
+        "path": "/carpicture07/pic4207/42072800_027.jpg",
+        "type": "DIAG2",
+        "updateDateTime": "2026-05-26T15:50:51",
+        "desc": null
+      }
+    ],
+    "options": {
+      "type": "CAR",
+      "standard": [
+        "001",
+        "004",
+        "005",
+        "006",
+        "007",
+        "008",
+        "010",
+        "014",
+        "015",
+        "017",
+        "019",
+        "020",
+        "021",
+        "022",
+        "023",
+        "024",
+        "026",
+        "027",
+        "030",
+        "031",
+        "032",
+        "033",
+        "034",
+        "035",
+        "051",
+        "055",
+        "056",
+        "057",
+        "058",
+        "059",
+        "063",
+        "072",
+        "074",
+        "075",
+        "077",
+        "078",
+        "079",
+        "081",
+        "082",
+        "083",
+        "084",
+        "085",
+        "086",
+        "087",
+        "088",
+        "092",
+        "093",
+        "094",
+        "095",
+        "096",
+        "097"
+      ],
+      "etc": [],
+      "choice": [],
+      "tuning": []
+    },
+    "condition": {
+      "accident": { "recordView": true, "resumeView": true },
+      "inspection": { "formats": ["TABLE"] },
+      "seizing": { "seizingCount": 0, "pledgeCount": 0 }
+    },
+    "partnership": {
+      "brand": null,
+      "testdrive": { "active": false },
+      "dealer": {
+        "userId": "minfe92",
+        "name": "배민철",
+        "firm": {
+          "code": "3011",
+          "name": "올카모터스",
+          "diag2Partnered": true,
+          "diagnosisCenters": [
+            {
+              "code": "147",
+              "name": "엔카진단센터 대구 동구점",
+              "major": true,
+              "telephoneNumber": "053-965-8746",
+              "address": "대구 동구 반야월로 257"
+            },
+            {
+              "code": "193",
+              "name": "엔카진단센터 대구 동촌점",
+              "major": false,
+              "telephoneNumber": "053-983-5455",
+              "address": "대구 동구 방촌로 64 1층"
+            }
+          ],
+          "meetgoCenters": []
+        },
+        "visitReservation": false
+      },
+      "isPartneredVehicle": true,
+      "certifiedBrand": null,
+      "lease": null,
+      "rent": null
+    },
+    "contents": {
+      "text": "No paint  Tax100%  key3ea\nmade. 2025-06-03\nDocuments Ready for Immediate Deregistration\n\nNo paint , Tax100% , key3ea\nmade. 2025-06-03\nDocuments Ready for Immediate Deregistration\n\nNo paint , Tax100% , key3ea\nmade. 2025-06-03\nDocuments Ready for Immediate Deregistration\n\nblack seat\n\nPanoramic Glass Roof\nHarman Kardon Sound System\nFront Comfort Seats\nDriver Memory Seat\nFront Passenger Memory Seat\nFront Ventilated Seats\nHeated Steering Wheel\n4-Zone Automatic Climate Control\nDriving Assistant Professional\nSurround View Monitor (SVM)\nPower Tailgate\nAdaptive LED Headlamps\nM Sport Steering Wheel\nM Sport Brakes (Dark Blue)",
+      "meetGoText": null
+    },
+    "view": {
+      "encarDiagnosis": 2,
+      "encarMeetGo": 0,
+      "hasEvBatteryInfo": false,
+      "photoPlus": 2
+    },
+    "vehicleId": 42072800,
+    "vehicleType": "CAR",
+    "vin": "WBA51FJ05SCV71597",
+    "vehicleNo": "209누2192"
+  },
+  {
+    "manage": {
+      "dummy": true,
+      "dummyVehicleId": 42088496,
+      "reRegistered": false,
+      "webReserved": true,
+      "registDateTime": "2026-05-28T09:50:31",
+      "firstAdvertisedDateTime": "2026-05-28T10:15:02",
+      "modifyDateTime": "2026-05-28T13:15:06",
+      "subscribeCount": 0,
+      "viewCount": 207
+    },
+    "category": {
+      "type": "CAR",
+      "manufacturerCd": "012",
+      "manufacturerName": "BMW",
+      "modelCd": "095",
+      "modelName": "5시리즈 (G60)",
+      "gradeCd": "004",
+      "gradeName": "530i xDrive M 스포츠",
+      "gradeEnglishName": "530i xDrive M Sport",
+      "yearMonth": "202503",
+      "formYear": "2025",
+      "domestic": false,
+      "importType": "REGULAR_IMPORT",
+      "originPrice": 8760,
+      "manufacturerEnglishName": "BMW",
+      "modelGroupCd": "003",
+      "modelGroupName": "5시리즈",
+      "modelGroupEnglishName": "5-Series",
+      "gradeDetailCd": null,
+      "gradeDetailName": null,
+      "gradeDetailEnglishName": null,
+      "jatoVehicleId": 774775920250201,
+      "warranty": {
+        "userDefined": true,
+        "companyName": "BMW코리아",
+        "bodyMonth": 24,
+        "bodyMileage": 9999999,
+        "transmissionMonth": 36,
+        "transmissionMileage": 60000
+      }
+    },
+    "advertisement": {
+      "type": "CAR",
+      "price": 8450,
+      "status": "ADVERTISE",
+      "warrantyStyleColor": "WHITE",
+      "trust": ["HomeService", "Warranty"],
+      "hotMark": [],
+      "oneLineText": null,
+      "salesStatus": null,
+      "directInspected": false,
+      "preVerified": true,
+      "extendWarranty": false,
+      "deemedExtendWarranty": false,
+      "homeService": true,
+      "meetGo": false,
+      "preDelivery": false,
+      "leaseRentInfo": null,
+      "encarPassType": "Y",
+      "encarPassCategoryType": "CLEAR",
+      "underBodyPhotos": [
+        {
+          "photoType": "UNDER_BODY",
+          "photoPath": "/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/88b90a13-b6af-4413-9f51-252e9f908fca.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/88b90a13-b6af-4413-9f51-252e9f908fca.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_FRONT_LEFT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/64e21474-2e75-4370-a0df-4fc16dfea4eb.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/64e21474-2e75-4370-a0df-4fc16dfea4eb.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_FRONT_RIGHT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/a8585a1d-3eb9-4deb-b380-c66e3e49f697.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/a8585a1d-3eb9-4deb-b380-c66e3e49f697.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_REAR_RIGHT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/d4d5a7b9-318a-468d-b78f-685bc82a4279.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/d4d5a7b9-318a-468d-b78f-685bc82a4279.jpg"
+        },
+        {
+          "photoType": "UNDER_BODY_REAR_LEFT",
+          "photoPath": "/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/8df83a40-6b5b-4e1f-a288-13ce1ceaf041.jpg",
+          "photoUrl": "http://imgcar.encar.com/diagnosis/evaluation/carphoto/car4/car64/insp/4012364/8df83a40-6b5b-4e1f-a288-13ce1ceaf041.jpg"
+        }
+      ],
+      "hasUnderBodyPhoto": true,
+      "advertisementType": "NORMAL",
+      "diagnosisCar": true
+    },
+    "contact": {
+      "userId": "mir5888",
+      "userType": "DEALER",
+      "no": "05062411713",
+      "address": "경기 수원시 권선구 평동로79번길 45",
+      "contactType": "MOBILE",
+      "isVerifyOwner": false,
+      "isOwnerPartner": true
+    },
+    "spec": {
+      "type": "CAR",
+      "mileage": 30259,
+      "displacement": 1998,
+      "transmissionName": "오토",
+      "fuelCd": "001",
+      "fuelName": "가솔린",
+      "colorName": "검정색",
+      "customColor": null,
+      "seatCount": 5,
+      "tradeType": "D",
+      "tradeOwnerType": null,
+      "tradeCompanyName": null,
+      "bodyName": "중형차"
+    },
+    "photos": [
+      {
+        "code": "002",
+        "path": "/carpicture08/pic4208/42088185_002.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "005",
+        "path": "/carpicture08/pic4208/42088185_005.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "010",
+        "path": "/carpicture08/pic4208/42088185_010.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "044",
+        "path": "/carpicture08/pic4208/42088185_044.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "055",
+        "path": "/carpicture08/pic4208/42088185_055.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "034",
+        "path": "/carpicture08/pic4208/42088185_034.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "006",
+        "path": "/carpicture08/pic4208/42088185_006.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "015",
+        "path": "/carpicture08/pic4208/42088185_015.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "004",
+        "path": "/carpicture08/pic4208/42088185_004.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "009",
+        "path": "/carpicture08/pic4208/42088185_009.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "023",
+        "path": "/carpicture08/pic4208/42088185_023.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "049",
+        "path": "/carpicture08/pic4208/42088185_049.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "024",
+        "path": "/carpicture08/pic4208/42088185_024.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "020",
+        "path": "/carpicture08/pic4208/42088185_020.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "021",
+        "path": "/carpicture08/pic4208/42088185_021.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "036",
+        "path": "/carpicture08/pic4208/42088185_036.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "046",
+        "path": "/carpicture08/pic4208/42088185_046.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "018",
+        "path": "/carpicture08/pic4208/42088185_018.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "022",
+        "path": "/carpicture08/pic4208/42088185_022.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "031",
+        "path": "/carpicture08/pic4208/42088185_031.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "050",
+        "path": "/carpicture08/pic4208/42088185_050.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "051",
+        "path": "/carpicture08/pic4208/42088185_051.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "033",
+        "path": "/carpicture08/pic4208/42088185_033.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "008",
+        "path": "/carpicture08/pic4208/42088185_008.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "041",
+        "path": "/carpicture08/pic4208/42088185_041.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "052",
+        "path": "/carpicture08/pic4208/42088185_052.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "003",
+        "path": "/carpicture08/pic4208/42088185_003.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "043",
+        "path": "/carpicture08/pic4208/42088185_043.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "047",
+        "path": "/carpicture08/pic4208/42088185_047.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "057",
+        "path": "/carpicture08/pic4208/42088185_057.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "017",
+        "path": "/carpicture08/pic4208/42088185_017.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "056",
+        "path": "/carpicture08/pic4208/42088185_056.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "001",
+        "path": "/carpicture08/pic4208/42088185_027.jpg",
+        "type": "DIAG2",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "035",
+        "path": "/carpicture08/pic4208/42088185_035.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "042",
+        "path": "/carpicture08/pic4208/42088185_042.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "053",
+        "path": "/carpicture08/pic4208/42088185_053.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "045",
+        "path": "/carpicture08/pic4208/42088185_045.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "048",
+        "path": "/carpicture08/pic4208/42088185_048.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "054",
+        "path": "/carpicture08/pic4208/42088185_054.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "019",
+        "path": "/carpicture08/pic4208/42088185_019.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "032",
+        "path": "/carpicture08/pic4208/42088185_032.jpg",
+        "type": "OUTER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "007",
+        "path": "/carpicture08/pic4208/42088185_007.jpg",
+        "type": "INNER",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "016",
+        "path": "/carpicture08/pic4208/42088185_016.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      },
+      {
+        "code": "040",
+        "path": "/carpicture08/pic4208/42088185_040.jpg",
+        "type": "OPTION",
+        "updateDateTime": "2026-05-28T10:14:43",
+        "desc": null
+      }
+    ],
+    "options": {
+      "type": "CAR",
+      "standard": [
+        "001",
+        "004",
+        "005",
+        "006",
+        "007",
+        "008",
+        "010",
+        "014",
+        "015",
+        "017",
+        "019",
+        "020",
+        "021",
+        "022",
+        "023",
+        "024",
+        "026",
+        "027",
+        "030",
+        "031",
+        "032",
+        "033",
+        "034",
+        "035",
+        "051",
+        "055",
+        "056",
+        "057",
+        "058",
+        "059",
+        "063",
+        "072",
+        "075",
+        "077",
+        "078",
+        "079",
+        "081",
+        "082",
+        "083",
+        "084",
+        "085",
+        "086",
+        "087",
+        "088",
+        "092",
+        "093",
+        "094",
+        "095",
+        "096",
+        "097"
+      ],
+      "etc": [],
+      "choice": [],
+      "tuning": []
+    },
+    "condition": {
+      "accident": { "recordView": true, "resumeView": true },
+      "inspection": { "formats": ["TABLE"] },
+      "seizing": { "seizingCount": 0, "pledgeCount": 0 }
+    },
+    "partnership": {
+      "brand": null,
+      "testdrive": { "active": false },
+      "dealer": {
+        "userId": "mir5888",
+        "name": "안진수",
+        "firm": {
+          "code": "6829",
+          "name": "(주)브이아이피준모터스",
+          "diag2Partnered": true,
+          "diagnosisCenters": [
+            {
+              "code": "182",
+              "name": "엔카진단센터 수원 권선점",
+              "major": true,
+              "telephoneNumber": "031-278-9461",
+              "address": "경기 수원시 권선구 평동로 65"
+            },
+            {
+              "code": "229",
+              "name": "엔카진단센터 수원 SKV1점",
+              "major": false,
+              "telephoneNumber": "031-227-6260",
+              "address": "경기 수원시 권선구 평동로79번길 45 SKV1 motors 638호, 653호"
+            }
+          ],
+          "meetgoCenters": []
+        },
+        "visitReservation": false
+      },
+      "isPartneredVehicle": true,
+      "certifiedBrand": null,
+      "lease": null,
+      "rent": null
+    },
+    "contents": {
+      "text": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  \n(주)VIP준모터스 │ 수원 SK-V1 Motors 단지  \n대표이사 안 진 수  \n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n◆ 브랜드 철학  \n“좋은 차는 주인을 오래 기다리지 않습니다”  \n저희 VIP준모터스는 **최고가 매입 · 최저가 판매**를 원칙으로  \n고객의 신뢰와 만족을 최우선으로 생각합니다.\n\n- 김생민의 비즈정보쇼 100회 출연  \n- 서울시 표창장 수상  \n- 친절함 + 전문성 + 투명성 = 신뢰받는 자동차 매매 전문 기업\n\n고객님께 믿음과 결과로 보답하는 딜러가 되겠습니다.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n◆ 차 량 정 보 ◆\n\n모델명 : BMW 5시리즈 (G60) 530i xDrive M스포츠\n\n등급 : 5시리즈 (G60) 530i xDrive M스포츠\n\n연식 : 2025년식 3월\n\n주행거리 : 30,259km\n\n색상 : 블랙\n\n사고유무 : 완 전 무 사 고\n\n\n직접 확인 후 매입한 차량으로 실매물 그대로 안내드립니다.\n동급 대비 관리 상태가 좋은 차량이며 전반적인 컨디션 깔끔하게 유지되어 있습니다.\n\n이전 차주분께서 꾸준히 관리하며 운행하신 차량으로 무리한 운행 없이 사용된 차량입니다.\n매입 당시 직접 방문하여 도막 측정 및 차량 상태 꼼꼼히 확인 완료했습니다.\n\n실물 확인 시 더욱 만족도 높은 차량이며\n차량 상태는 말보다 직접 보시면 더 확신 드립니다.\n허위 없이 있는 그대로 안내드리겠습니다.\n\n\n# 이 차량을 추천드리는 이유!! #\n\n\uD83D\uDC49 “퍼포먼스·안정성·고급감까지 모두 갖춘, 완성도 높은 프리미엄 세단 G60 530i xDrive M 스포츠 모델입니다.”\n\n\uD83D\uDD25 2025년식 BMW 5시리즈(G60) 530i xDrive M 스포츠 장점 5가지\n1️⃣ 530i xDrive만의 강력한 주행 퍼포먼스\n\n2.0 터보 엔진 기반의 여유로운 출력과\nBMW 특유의 경쾌한 가속감 제공\n\n2️⃣ xDrive AWD 시스템의 뛰어난 안정성\n\n눈길·빗길에서도 안정적인 접지력 확보\n고속 주행 시에도 뛰어난 밸런스 제공\n\n3️⃣ M 스포츠 패키지의 스포티한 디자인\n\n전용 범퍼·휠·에어로파츠 적용\n고급감과 역동성을 동시에 갖춘 외관 완성\n\n4️⃣ 최신 G60 실내 감성과 첨단 기능\n\nBMW 커브드 디스플레이와 최신 iDrive 시스템 탑재\n미래지향적인 실내와 편리한 조작성 제공\n\n5️⃣ 프리미엄 세단다운 정숙성과 승차감\n\n부드러운 승차감과 뛰어난 차음성\n장거리 주행 시에도 편안한 드라이빙 가능\n\n# 오시는 길\n\n경기도 수원시 권선구 평동로79번길 45\nSK V1 Motors 4층 415호\n\n수원역 3번출구 도보 10분\n \n# 상 담 안 내\n\n24시간 상담 가능 !!\n차량 문의 / 할부 / 대차 상담 가능 !!\n\n# 편하게 연락 주세요!",
+      "meetGoText": null
+    },
+    "view": {
+      "encarDiagnosis": 2,
+      "encarMeetGo": 0,
+      "hasEvBatteryInfo": false,
+      "photoPlus": 2
+    },
+    "vehicleId": 42088185,
+    "vehicleType": "CAR",
+    "vin": "WBA51FJ01SCU28873",
+    "vehicleNo": "238주6850"
+  }
+]

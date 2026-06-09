@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework',
     'rest_framework_simplejwt',
+    'drf_spectacular',
     'corsheaders',
     'cars',
 ]
@@ -79,6 +80,14 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'CRM импорта автомобилей из Кореи — API',
+    'DESCRIPTION': 'Backend: каталог Encar, подписки, заявки, статусы доставки.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 # JWT Settings
@@ -160,16 +169,25 @@ WSGI_APPLICATION = 'crm_core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': environ.get('POSTGRES_DB', 'crm_db'),
-        'USER': environ.get('POSTGRES_USER', 'crm_user'),
-        'PASSWORD': environ.get('POSTGRES_PASSWORD', 'crm_password'),
-        'HOST': environ.get('POSTGRES_HOST', 'localhost'),
-        'PORT': environ.get('POSTGRES_PORT', '5432'),
+# Локально (без Postgres) можно использовать SQLite: USE_SQLITE=1
+if environ.get('USE_SQLITE') == '1':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': environ.get('POSTGRES_DB', 'crm_db'),
+            'USER': environ.get('POSTGRES_USER', 'crm_user'),
+            'PASSWORD': environ.get('POSTGRES_PASSWORD', 'crm_password'),
+            'HOST': environ.get('POSTGRES_HOST', 'localhost'),
+            'PORT': environ.get('POSTGRES_PORT', '5432'),
+        }
+    }
 
 
 # Password validation
@@ -223,9 +241,22 @@ CELERY_TIMEZONE = TIME_ZONE
 # Telegram Bot
 TELEGRAM_BOT_TOKEN = environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_WEBHOOK_URL = environ.get('TELEGRAM_WEBHOOK_URL', '')
+# Разрешить вход без проверки подписи initData (ТОЛЬКО для локальной разработки!)
+TELEGRAM_AUTH_DEV_BYPASS = environ.get('TELEGRAM_AUTH_DEV_BYPASS', 'False') == 'True'
+# Время жизни initData (сек) для защиты от повторного использования
+TELEGRAM_AUTH_TTL = int(environ.get('TELEGRAM_AUTH_TTL', '86400'))
 
 # Parser Service
 PARSER_API_KEY = environ.get('PARSER_API_KEY', 'default-parser-key')
+
+# --- Источник данных Encar ---
+ENCAR_BASE_URL = environ.get('ENCAR_BASE_URL', 'https://api.encar.com')
+ENCAR_IMAGE_BASE = environ.get('ENCAR_IMAGE_BASE', 'https://ci.encar.com')
+ENCAR_REQUEST_DELAY = float(environ.get('ENCAR_REQUEST_DELAY', '1.0'))
+
+# --- Курс валют ---
+# RUB за 1 KRW (вон). Обновляется задачей update_exchange_rates.
+KRW_RUB_RATE = float(environ.get('KRW_RUB_RATE', '0.065'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
