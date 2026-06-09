@@ -5,6 +5,7 @@ from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse
+from django.conf import settings
 import json
 import logging
 
@@ -74,14 +75,18 @@ def parser_webhook(request):
                     brand=brand
                 )
 
-                # Проверяем, существует ли автомобиль
+                # Дедупликация по (source, external_id). В качестве external_id
+                # используем переданный id/vin.
+                external_id = str(car_data.get('external_id') or car_data['vin'])
                 car, created = Car.objects.update_or_create(
-                    vin=car_data['vin'],
+                    source=car_data.get('source', 'webhook'),
+                    external_id=external_id,
                     defaults={
+                        'vin': car_data.get('vin') or None,
                         'brand': brand,
                         'model': model,
                         'year': car_data['year'],
-                        'fuel_type': car_data.get('fuel_type', 'PETROL'),
+                        'fuel_type': car_data.get('fuel_type', 'OTHER'),
                         'engine_volume': car_data.get('engine_volume'),
                         'engine_power': car_data.get('engine_power'),
                         'transmission': car_data.get('transmission'),
@@ -89,6 +94,7 @@ def parser_webhook(request):
                         'drive_type': car_data.get('drive_type'),
                         'color': car_data.get('color'),
                         'seller_country': car_data.get('seller_country', 'Южная Корея'),
+                        'is_active': True,
                     }
                 )
 
@@ -96,10 +102,13 @@ def parser_webhook(request):
                 Advertisement.objects.update_or_create(
                     car=car,
                     defaults={
+                        'external_id': external_id,
+                        'price_krw': car_data.get('price_won'),
                         'car_price': car_data.get('price_rub', 0),
                         'mileage': car_data.get('mileage', 0),
-                        'condition': car_data.get('condition', 'Хорошее'),
-                        'vin': car_data['vin'],
+                        'condition': car_data.get('condition', ''),
+                        'is_active': True,
+                        'vin': car_data.get('vin') or '',
                     }
                 )
 

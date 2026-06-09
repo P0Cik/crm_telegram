@@ -13,6 +13,7 @@ from .models import (
     Car,
     Advertisement,
     SearchRequest,
+    SearchProfile,
     Order,
     OrderStatusHistory
 )
@@ -23,9 +24,11 @@ from .serializers import (
     CarSerializer,
     AdvertisementSerializer,
     SearchRequestSerializer,
+    SearchProfileSerializer,
     OrderSerializer,
     OrderStatusHistorySerializer
 )
+from .filters import CarFilter
 
 # Импорт для уведомлений
 try:
@@ -137,50 +140,57 @@ class CarViewSet(viewsets.ModelViewSet):
     API endpoint для работы с автомобилями.
     Все могут просматривать, только авторизованные пользователи могут создавать.
     """
-    queryset = Car.objects.select_related('brand', 'model').all()
+    queryset = (
+        Car.objects.select_related('brand', 'model')
+        .prefetch_related('advertisements', 'photos')
+        .all()
+    )
     serializer_class = CarSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = {
-        'brand': ['exact'],
-        'model': ['exact'],
-        'year': ['gte', 'lte', 'exact'],
-        'fuel_type': ['exact'],
-        'transmission': ['exact'],
-        'steering_wheel': ['exact'],
-        'drive_type': ['exact'],
-        'color': ['exact'],
-        'seller_country': ['exact'],
-    }
-    search_fields = ['vin', 'brand__name', 'model__name', 'color']
-    ordering_fields = ['year', 'engine_power', 'engine_volume']
-    ordering = ['-year']
+    filterset_class = CarFilter
+    search_fields = ['vin', 'brand__name', 'model__name', 'model_group', 'badge', 'color']
+    ordering_fields = ['year', 'engine_power', 'engine_volume', 'first_seen_at']
+    ordering = ['-first_seen_at']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # По умолчанию в каталоге показываем только активные предложения
+        if self.action == 'list' and 'is_active' not in self.request.query_params:
+            qs = qs.filter(is_active=True)
+        return qs
 
     @action(detail=False, methods=['get'])
-    def search(self, request):
+    def filters(self, request):
         """
-        Расширенный поиск автомобилей по различным критериям
+        Доступные значения фильтров для построения UI: марки, модели,
+        типы топлива и диапазоны года/цены.
         """
-        queryset = self.get_queryset()
-        
-        brand = request.query_params.get('brand')
-        model = request.query_params.get('model')
-        year_min = request.query_params.get('year_min')
-        year_max = request.query_params.get('year_max')
-        price_min = request.query_params.get('price_min')
-        price_max = request.query_params.get('price_max')
-        
-        if brand:
-            queryset = queryset.filter(brand__id=brand)
-        if model:
-            queryset = queryset.filter(model__id=model)
-        if year_min:
-            queryset = queryset.filter(year__gte=year_min)
-        if year_max:
-            queryset = queryset.filter(year__lte=year_max)
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        from django.db.models import Min, Max
+
+        active = Car.objects.filter(is_active=True)
+        brands = list(
+            Brand.objects.filter(car__in=active).distinct().values('id', 'name', 'name_ru')
+        )
+        models = list(
+            Model.objects.filter(car__in=active).distinct()
+            .values('id', 'name', 'model_group', 'brand_id')
+        )
+        year_range = active.aggregate(min=Min('year'), max=Max('year'))
+        price_range = (
+            Advertisement.objects.filter(is_active=True, car__is_active=True)
+            .aggregate(min=Min('car_price'), max=Max('car_price'))
+        )
+        fuel_types = [
+            {'value': v, 'display': d} for v, d in Car.FuelType.choices
+        ]
+        return Response({
+            'brands': brands,
+            'models': models,
+            'fuel_types': fuel_types,
+            'year_range': year_range,
+            'price_range': price_range,
+        })
 
 
 class AdvertisementViewSet(viewsets.ModelViewSet):
@@ -248,7 +258,7 @@ class SearchRequestViewSet(viewsets.ModelViewSet):
     """
     queryset = SearchRequest.objects.select_related('user', 'brand', 'model').all()
     serializer_class = SearchRequestSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'brand', 'model']
     ordering_fields = ['id']
@@ -347,7 +357,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         'user', 'car', 'car__brand', 'car__model', 'manager'
     ).all()
     serializer_class = OrderSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'car__brand', 'car__model']
     search_fields = ['car__vin', 'car__brand__name', 'car__model__name']
@@ -386,22 +396,20 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
 
-        # Если пользователь не аутентифицирован, возвращаем ошибку
-        if not user.is_authenticated:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Необходима аутентификация через Telegram")
-
-        if user.role != User.Role.MANAGER:
-            raise permissions.PermissionDenied("Только менеджеры могут создавать заказы")
-
+        # Заявку (бронь) создаёт клиент. Менеджер также может оформить заказ.
         order = serializer.save()
+
+        # Создаём первую запись истории статусов
+        OrderStatusHistory.objects.create(
+            order=order, status=order.status, updated_by=user,
+            comment='Заявка создана'
+        )
 
         # Отправка уведомления в Telegram
         if NOTIFICATIONS_ENABLED:
             try:
-                send_order_notification(user, order)
-            except Exception as e:
-                # Не прерываем выполнение, если уведомление не отправилось
+                send_order_notification(order.user, order)
+            except Exception:
                 pass
 
     @action(detail=True, methods=['post'])
@@ -455,12 +463,18 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.status = new_status
         order.save()
 
+        # Фиксируем смену статуса в истории
+        if old_status != new_status:
+            OrderStatusHistory.objects.create(
+                order=order, status=new_status, updated_by=user,
+                comment=request.data.get('comment', '') or ''
+            )
+
         # Отправка уведомления об изменении статуса
         if NOTIFICATIONS_ENABLED and old_status != new_status:
             try:
                 send_order_status_notification(order.user, order, new_status)
-            except Exception as e:
-                # Не прерываем выполнение, если уведомление не отправилось
+            except Exception:
                 pass
 
         serializer = self.get_serializer(order)
@@ -560,3 +574,31 @@ class OrderStatusHistoryViewSet(viewsets.ModelViewSet):
                 {'error': 'Заказ не найден'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class IsManagerOrStaff(permissions.BasePermission):
+    """Доступ только менеджерам и администраторам."""
+    def has_permission(self, request, view):
+        u = request.user
+        return bool(u and u.is_authenticated and (u.is_staff or getattr(u, 'role', None) == User.Role.MANAGER))
+
+
+class SearchProfileViewSet(viewsets.ModelViewSet):
+    """
+    API для профилей сбора данных Encar (для менеджеров).
+    Также доступно ручное создание/редактирование через Django Admin.
+    """
+    queryset = SearchProfile.objects.all()
+    serializer_class = SearchProfileSerializer
+    permission_classes = [IsManagerOrStaff]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['is_active', 'source']
+    ordering_fields = ['name', 'last_run_at']
+
+    @action(detail=True, methods=['post'])
+    def run(self, request, pk=None):
+        """Запустить синхронизацию профиля (через Celery)."""
+        profile = self.get_object()
+        from .tasks import sync_encar_profile
+        sync_encar_profile.delay(profile.id)
+        return Response({'status': 'scheduled', 'profile_id': profile.id})

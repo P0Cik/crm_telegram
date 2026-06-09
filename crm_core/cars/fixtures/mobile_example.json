@@ -1,0 +1,1097 @@
+{
+  "Count": 1078,
+  "SearchResults": [
+    {
+      "Id": "41467639",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture05/pic4145/41459813_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture05/pic4145/41459813_001.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture05/pic4145/41459813_003.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture05/pic4145/41459813_004.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture05/pic4145/41459813_007.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d xLine",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 201910.0,
+      "FormYear": "2019",
+      "Mileage": 94111.0,
+      "Color": "청색",
+      "ColorExpression": "#124280;#124280",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 5100.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/silver8796.jpg"
+    },
+    {
+      "Id": "41448337",
+      "Separation": ["B"],
+      "Trust": ["HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture04/pic4144/41444487_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture04/pic4144/41444487_001.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture04/pic4144/41444487_003.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture04/pic4144/41444487_004.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture04/pic4144/41444487_007.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 45e xLine",
+      "Transmission": "오토",
+      "FuelType": "가솔린+전기",
+      "Year": 202104.0,
+      "FormYear": "2021",
+      "Mileage": 86068.0,
+      "Color": "쥐색",
+      "ColorExpression": "#616161;#616161",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 5450.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "광주",
+      "DealerPhoto": "/userdata/dealer/photo/youmini7.jpg"
+    },
+    {
+      "Id": "41281020",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record"],
+      "Photo": "/carpicture01/pic4091/40917162_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture01/pic4091/40917162_001.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture01/pic4091/40917162_003.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture01/pic4091/40917162_004.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture01/pic4091/40917162_007.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d M 스포츠",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 202206.0,
+      "FormYear": "2022",
+      "Mileage": 68805.0,
+      "Color": "흰색",
+      "ColorExpression": "#ffffff;#ffffff",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 6950.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/k03242128310b.jpeg"
+    },
+    {
+      "Id": "41760261",
+      "Separation": ["B"],
+      "Trust": ["HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture04/pic4174/41744587_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture04/pic4174/41744587_001.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture04/pic4174/41744587_003.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture04/pic4174/41744587_004.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture04/pic4174/41744587_007.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "M50i",
+      "Transmission": "오토",
+      "FuelType": "가솔린",
+      "Year": 202201.0,
+      "FormYear": "2022",
+      "Mileage": 90674.0,
+      "Color": "쥐색",
+      "ColorExpression": "#616161;#616161",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 6190.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기"
+    },
+    {
+      "Id": "41083095",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture08/pic4108/41081751_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture08/pic4108/41081751_001.jpg",
+          "updatedDate": "2025-12-01T09:10:25Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture08/pic4108/41081751_003.jpg",
+          "updatedDate": "2025-12-01T09:10:25Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture08/pic4108/41081751_004.jpg",
+          "updatedDate": "2025-12-01T09:10:25Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture08/pic4108/41081751_007.jpg",
+          "updatedDate": "2025-12-01T09:10:25Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d xLine",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 202101.0,
+      "FormYear": "2021",
+      "Mileage": 95686.0,
+      "Color": "쥐색",
+      "ColorExpression": "#616161;#616161",
+      "SeatColor": "검정색 계열",
+      "SeatColorExpression": "#000000;#000000",
+      "AdType": ["G"],
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 4990.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/koko1922.jpg"
+    },
+    {
+      "Id": "42129489",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture02/pic4212/42127345_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture02/pic4212/42127345_001.jpg",
+          "updatedDate": "2026-06-04T07:12:37Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture02/pic4212/42127345_003.jpg",
+          "updatedDate": "2026-06-04T07:12:37Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture02/pic4212/42127345_004.jpg",
+          "updatedDate": "2026-06-04T07:12:37Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture02/pic4212/42127345_007.jpg",
+          "updatedDate": "2026-06-04T07:12:37Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 40i M 스포츠",
+      "Transmission": "오토",
+      "FuelType": "가솔린",
+      "Year": 202205.0,
+      "FormYear": "2022",
+      "Mileage": 98301.0,
+      "Color": "쥐색",
+      "ColorExpression": "#616161;#616161",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 6550.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "인천",
+      "DealerPhoto": "/userdata/dealer/photo/junwooil.jpg"
+    },
+    {
+      "Id": "41687472",
+      "Separation": ["B"],
+      "Trust": ["Warranty"],
+      "ServiceMark": ["EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture08/pic4168/41687472_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture08/pic4168/41687472_001.jpg",
+          "updatedDate": "2026-03-18T06:59:13Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture08/pic4168/41687472_003.jpg",
+          "updatedDate": "2026-03-18T06:59:13Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture08/pic4168/41687472_004.jpg",
+          "updatedDate": "2026-03-18T06:59:13Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture08/pic4168/41687472_007.jpg",
+          "updatedDate": "2026-03-18T06:59:13Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (F15)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 201403.0,
+      "FormYear": "2014",
+      "Mileage": 253364.0,
+      "Color": "은회색",
+      "ColorExpression": "#bcbcbc;#bcbcbc",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 1480.0,
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "경기"
+    },
+    {
+      "Id": "41598877",
+      "Separation": ["B"],
+      "Trust": [],
+      "ServiceMark": [],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture09/pic4159/41598877_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture09/pic4159/41598877_001.jpg",
+          "updatedDate": "2026-03-04T07:30:19Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture09/pic4159/41598877_003.jpg",
+          "updatedDate": "2026-03-04T07:30:19Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture09/pic4159/41598877_004.jpg",
+          "updatedDate": "2026-03-04T07:30:19Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture09/pic4159/41598877_007.jpg",
+          "updatedDate": "2026-03-04T07:30:19Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (E70)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 201004.0,
+      "FormYear": "2010",
+      "Mileage": 222332.0,
+      "Color": "은색",
+      "ColorExpression": "#e5e5e5;#e5e5e5",
+      "SeatColor": "검정색 계열",
+      "SeatColorExpression": "#000000;#000000",
+      "AdType": ["A", "B", "C", "G"],
+      "Hotmark": "14;15;13",
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 479.0,
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "인천",
+      "DealerPhoto": "/userdata/dealer/photo/qkrwotmd.jpg"
+    },
+    {
+      "Id": "40969677",
+      "Separation": ["B"],
+      "Trust": ["Warranty"],
+      "ServiceMark": ["EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record"],
+      "Photo": "/carpicture06/pic4096/40969677_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture06/pic4096/40969677_001.jpg",
+          "updatedDate": "2025-11-17T00:29:16Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture06/pic4096/40969677_003.jpg",
+          "updatedDate": "2025-11-17T00:29:16Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture06/pic4096/40969677_004.jpg",
+          "updatedDate": "2025-11-17T00:29:16Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture06/pic4096/40969677_007.jpg",
+          "updatedDate": "2025-11-17T00:29:16Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 45e xLine",
+      "Transmission": "오토",
+      "FuelType": "가솔린+전기",
+      "Year": 202212.0,
+      "FormYear": "2023",
+      "Mileage": 15832.0,
+      "Color": "흰색",
+      "ColorExpression": "#ffffff;#ffffff",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["B", "E", "G"],
+      "MobileAdWords": "**2022년09월제작+NO Accident+NO PAINT+NO PAINT",
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 7590.0,
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/yegan9145.jpg"
+    },
+    {
+      "Id": "41459813",
+      "Separation": ["B"],
+      "Trust": ["Warranty"],
+      "ServiceMark": ["EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture05/pic4145/41459813_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture05/pic4145/41459813_001.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture05/pic4145/41459813_003.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture05/pic4145/41459813_004.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture05/pic4145/41459813_007.jpg",
+          "updatedDate": "2026-02-05T01:12:21Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d xLine",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 201910.0,
+      "FormYear": "2019",
+      "Mileage": 94111.0,
+      "Color": "청색",
+      "ColorExpression": "#124280;#124280",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 5100.0,
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/silver8796.jpg"
+    },
+    {
+      "Id": "41903493",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP2"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture10/pic4190/41902986_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture10/pic4190/41902986_027.jpg",
+          "updatedDate": "2026-04-22T05:12:17Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture10/pic4190/41902986_003.jpg",
+          "updatedDate": "2026-04-22T05:12:17Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture10/pic4190/41902986_004.jpg",
+          "updatedDate": "2026-04-22T05:12:17Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture10/pic4190/41902986_007.jpg",
+          "updatedDate": "2026-04-22T05:12:17Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d xLine",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 202206.0,
+      "FormYear": "2022",
+      "Mileage": 60274.0,
+      "Color": "흰색",
+      "ColorExpression": "#ffffff;#ffffff",
+      "SeatColor": "검정색 계열",
+      "SeatColorExpression": "#000000;#000000",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 5999.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "부산",
+      "DealerPhoto": "/userdata/dealer/photo/jae0118.jpg"
+    },
+    {
+      "Id": "41444487",
+      "Separation": ["B"],
+      "Trust": ["Warranty"],
+      "ServiceMark": ["EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture04/pic4144/41444487_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture04/pic4144/41444487_001.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture04/pic4144/41444487_003.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture04/pic4144/41444487_004.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture04/pic4144/41444487_007.jpg",
+          "updatedDate": "2026-02-02T05:43:46Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 45e xLine",
+      "Transmission": "오토",
+      "FuelType": "가솔린+전기",
+      "Year": 202104.0,
+      "FormYear": "2021",
+      "Mileage": 86068.0,
+      "Color": "쥐색",
+      "ColorExpression": "#616161;#616161",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 5450.0,
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "광주",
+      "DealerPhoto": "/userdata/dealer/photo/youmini7.jpg"
+    },
+    {
+      "Id": "39238497",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture02/pic3922/39221591_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture02/pic3922/39221591_001.jpg",
+          "updatedDate": "2025-03-14T06:29:25Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture02/pic3922/39221591_003.jpg",
+          "updatedDate": "2025-03-14T06:29:25Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture02/pic3922/39221591_004.jpg",
+          "updatedDate": "2025-03-14T06:29:25Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture02/pic3922/39221591_007.jpg",
+          "updatedDate": "2025-03-14T06:29:25Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d xLine",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 202304.0,
+      "FormYear": "2023",
+      "Mileage": 19605.0,
+      "Color": "검정색",
+      "ColorExpression": "#000000;#000000",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 9500.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/dspseo.jpg"
+    },
+    {
+      "Id": "41562851",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture06/pic4156/41561288_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture06/pic4156/41561288_001.jpg",
+          "updatedDate": "2026-02-25T07:07:42Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture06/pic4156/41561288_003.jpg",
+          "updatedDate": "2026-02-25T07:07:42Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture06/pic4156/41561288_004.jpg",
+          "updatedDate": "2026-02-25T07:07:42Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture06/pic4156/41561288_007.jpg",
+          "updatedDate": "2026-02-25T07:07:42Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d xLine",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 202103.0,
+      "FormYear": "2021",
+      "Mileage": 99351.0,
+      "Color": "검정색",
+      "ColorExpression": "#000000;#000000",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 5090.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/kjy900407.jpg"
+    },
+    {
+      "Id": "42041912",
+      "Separation": ["B"],
+      "Trust": ["HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Record", "Resume"],
+      "Photo": "/carpicture03/pic4203/42035747_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture03/pic4203/42035747_001.jpg",
+          "updatedDate": "2026-05-19T02:20:48Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture03/pic4203/42035747_003.jpg",
+          "updatedDate": "2026-05-19T02:20:48Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture03/pic4203/42035747_004.jpg",
+          "updatedDate": "2026-05-19T02:20:48Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture03/pic4203/42035747_007.jpg",
+          "updatedDate": "2026-05-19T02:20:48Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (F15)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 40e i퍼포먼스",
+      "Transmission": "오토",
+      "FuelType": "가솔린+전기",
+      "Year": 201807.0,
+      "FormYear": "2018",
+      "Mileage": 46676.0,
+      "Color": "검정색",
+      "ColorExpression": "#000000;#000000",
+      "SeatColor": "검정색 계열",
+      "SeatColorExpression": "#000000;#000000",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 3900.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/skekakt15.jpg"
+    },
+    {
+      "Id": "41382257",
+      "Separation": ["B"],
+      "Trust": ["ExtendWarranty", "HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture07/pic4137/41374112_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture07/pic4137/41374112_001.jpg",
+          "updatedDate": "2026-04-23T00:37:33Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture07/pic4137/41374112_003.jpg",
+          "updatedDate": "2026-04-23T00:37:33Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture07/pic4137/41374112_004.jpg",
+          "updatedDate": "2026-04-23T00:37:33Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture07/pic4137/41374112_007.jpg",
+          "updatedDate": "2026-04-23T00:37:33Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 45e M 스포츠",
+      "Transmission": "오토",
+      "FuelType": "가솔린+전기",
+      "Year": 202110.0,
+      "FormYear": "2022",
+      "Mileage": 59963.0,
+      "Color": "흰색",
+      "ColorExpression": "#ffffff;#ffffff",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 6799.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/focus8510.jpg"
+    },
+    {
+      "Id": "42130309",
+      "Separation": ["B"],
+      "Trust": ["HomeService"],
+      "ServiceMark": ["EncarMeetgo", "EncarDiagnosisP1"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture01/pic4211/42116794_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture01/pic4211/42116794_001.jpg",
+          "updatedDate": "2026-06-04T08:18:50Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture01/pic4211/42116794_003.jpg",
+          "updatedDate": "2026-06-04T08:18:50Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture01/pic4211/42116794_004.jpg",
+          "updatedDate": "2026-06-04T08:18:50Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture01/pic4211/42116794_007.jpg",
+          "updatedDate": "2026-06-04T08:18:50Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 40i M 스포츠",
+      "Transmission": "오토",
+      "FuelType": "가솔린",
+      "Year": 202511.0,
+      "FormYear": "2026",
+      "Mileage": 5009.0,
+      "Color": "검정색",
+      "ColorExpression": "#000000;#000000",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "HomeServiceVerification": "Y",
+      "ServiceCopyCar": "DUPLICATION",
+      "Price": 13600.0,
+      "SellType": "일반",
+      "BuyType": ["Delivery"],
+      "OfficeCityState": "대구",
+      "DealerPhoto": "/userdata/dealer/photo/allcar123.jpg"
+    },
+    {
+      "Id": "40917162",
+      "Separation": ["B"],
+      "Trust": ["Warranty"],
+      "ServiceMark": ["EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record"],
+      "Photo": "/carpicture01/pic4091/40917162_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture01/pic4091/40917162_001.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture01/pic4091/40917162_003.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture01/pic4091/40917162_004.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture01/pic4091/40917162_007.jpg",
+          "updatedDate": "2025-11-17T09:04:50Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d M 스포츠",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 202206.0,
+      "FormYear": "2022",
+      "Mileage": 68805.0,
+      "Color": "흰색",
+      "ColorExpression": "#ffffff;#ffffff",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["G"],
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 6950.0,
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "경기",
+      "DealerPhoto": "/userdata/dealer/photo/k03242128310b.jpeg"
+    },
+    {
+      "Id": "41744587",
+      "Separation": ["B"],
+      "Trust": ["Warranty"],
+      "ServiceMark": ["EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture04/pic4174/41744587_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture04/pic4174/41744587_001.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture04/pic4174/41744587_003.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture04/pic4174/41744587_004.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture04/pic4174/41744587_007.jpg",
+          "updatedDate": "2026-03-30T06:06:33Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "M50i",
+      "Transmission": "오토",
+      "FuelType": "가솔린",
+      "Year": 202201.0,
+      "FormYear": "2022",
+      "Mileage": 90674.0,
+      "Color": "쥐색",
+      "ColorExpression": "#616161;#616161",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["A", "B", "C", "E", "G"],
+      "MobileAdWords": "최저가판매 최저과표이전 327만원취득세 이전가능",
+      "Hotmark": "13;14;15",
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 6190.0,
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "경기"
+    },
+    {
+      "Id": "41651395",
+      "Separation": ["B"],
+      "Trust": ["Warranty"],
+      "ServiceMark": ["EncarDiagnosisP0"],
+      "Condition": ["Inspection", "Record", "Resume"],
+      "Photo": "/carpicture05/pic4165/41651395_",
+      "Photos": [
+        {
+          "type": "001",
+          "location": "/carpicture05/pic4165/41651395_001.jpg",
+          "updatedDate": "2026-03-12T05:18:30Z",
+          "ordering": 1.0
+        },
+        {
+          "type": "003",
+          "location": "/carpicture05/pic4165/41651395_003.jpg",
+          "updatedDate": "2026-03-12T05:18:30Z",
+          "ordering": 3.0
+        },
+        {
+          "type": "004",
+          "location": "/carpicture05/pic4165/41651395_004.jpg",
+          "updatedDate": "2026-03-12T05:18:30Z",
+          "ordering": 4.0
+        },
+        {
+          "type": "007",
+          "location": "/carpicture05/pic4165/41651395_007.jpg",
+          "updatedDate": "2026-03-12T05:18:30Z",
+          "ordering": 7.0
+        }
+      ],
+      "Manufacturer": "BMW",
+      "Model": "X5 (G05)",
+      "ModelGroup": "X5",
+      "Badge": "xDrive 30d xLine",
+      "Transmission": "오토",
+      "FuelType": "디젤",
+      "Year": 202209.0,
+      "FormYear": "2022",
+      "Mileage": 108736.0,
+      "Color": "흰색",
+      "ColorExpression": "#ffffff;#ffffff",
+      "SeatColor": "갈색 계열",
+      "SeatColorExpression": "#DFA46E;#DFA46E",
+      "AdType": ["E", "G"],
+      "MobileAdWords": "무사고**순정키2개보유**레이져 라이트**7인승",
+      "ServiceCopyCar": "ORIGINAL",
+      "Price": 5820.0,
+      "SalesStatus": "CONTRACT",
+      "SellType": "일반",
+      "BuyType": [],
+      "OfficeCityState": "대구",
+      "DealerPhoto": "/userdata/dealer/photo/cpk134.jpg"
+    }
+  ]
+}

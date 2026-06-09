@@ -19,6 +19,7 @@ router.register(r'advertisements', views.AdvertisementViewSet, basename='adverti
 router.register(r'search-requests', views.SearchRequestViewSet, basename='searchrequest')
 router.register(r'orders', views.OrderViewSet, basename='order')
 router.register(r'order-status-history', views.OrderStatusHistoryViewSet, basename='orderstatushistory')
+router.register(r'search-profiles', views.SearchProfileViewSet, basename='searchprofile')
 
 
 @api_view(['GET'])
@@ -40,6 +41,10 @@ def api_root(request, format=None):
     })
 
 
+from drf_spectacular.views import (
+    SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+)
+
 urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
@@ -47,4 +52,8 @@ urlpatterns = [
     path('parser/webhook/', parser_views.parser_webhook, name='parser-webhook'),
     path('parser/status/', parser_views.parser_status, name='parser-status'),
     path('parser/test/', parser_views.parser_test, name='parser-test'),
+    # OpenAPI / документация
+    path('schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

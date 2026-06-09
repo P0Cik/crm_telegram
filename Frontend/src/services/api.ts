@@ -30,11 +30,15 @@ apiClient.interceptors.request.use((config) => {
 
 // Интерфейсы для API ответов
 interface ApiCar {
-  vin: string;
+  id: number;
+  vin: string | null;
   brand: { id: number; name: string };
-  model: { id: number; name: string };
+  model: { id: number; name: string } | null;
+  model_group?: string;
+  badge?: string;
   year: number;
   fuel_type: string;
+  fuel_type_display?: string;
   engine_volume: number;
   engine_power: number;
   transmission: string;
@@ -42,6 +46,11 @@ interface ApiCar {
   drive_type: string;
   color: string;
   seller_country: string;
+  region?: string;
+  price_won?: number;
+  price_rub?: number;
+  mileage?: number;
+  images?: string[];
 }
 
 interface ApiOrder {
@@ -81,24 +90,24 @@ interface ApiSubscription {
 
 // Преобразователи данных из API в формат приложения
 const transformApiCar = (apiCar: ApiCar): Car => ({
-  id: apiCar.vin,
-  make: apiCar.brand.name,
-  model: apiCar.model.name,
+  id: String(apiCar.id),
+  make: apiCar.brand?.name ?? '',
+  model: apiCar.model?.name ?? apiCar.model_group ?? '',
   year: apiCar.year,
-  priceWon: 0, // Будет заполнено из объявления
-  priceRub: 0,
-  images: [],
+  priceWon: apiCar.price_won ?? 0,
+  priceRub: apiCar.price_rub ?? 0,
+  images: apiCar.images ?? [],
   country: apiCar.seller_country,
   dateAdded: new Date().toISOString(),
   engineVolume: apiCar.engine_volume,
-  fuelType: apiCar.fuel_type.toLowerCase(),
+  fuelType: (apiCar.fuel_type_display || apiCar.fuel_type || '').toLowerCase(),
   gearbox: apiCar.transmission || 'автомат',
   wheelPosition: apiCar.steering_wheel === 'LEFT' ? 'левый' : 'правый',
   driveType: apiCar.drive_type || 'полный',
   color: apiCar.color,
-  mileage: 0,
+  mileage: apiCar.mileage ?? 0,
   power: apiCar.engine_power,
-  vin: apiCar.vin,
+  vin: apiCar.vin ?? '',
 });
 
 const transformApiOrder = (apiOrder: ApiOrder): Order => {
@@ -106,7 +115,7 @@ const transformApiOrder = (apiOrder: ApiOrder): Order => {
 
   return {
     id: apiOrder.id.toString(),
-    carId: apiOrder.car.vin,
+    carId: String(apiOrder.car.id),
     carDetails: car,
     clientName: apiOrder.user?.first_name || 'Клиент',
     clientPhone: apiOrder.user?.phone || '',
@@ -146,12 +155,22 @@ const transformApiSubscription = (apiSub: ApiSubscription): Subscription => {
 
 const mapOrderStatus = (status: string): 'dealing' | 'korea_warehouse' | 'shipping' | 'delivered' => {
   const statusMap: Record<string, 'dealing' | 'korea_warehouse' | 'shipping' | 'delivered'> = {
-    'PROCESSING': 'dealing',
-    'WAREHOUSE_KR': 'korea_warehouse',
-    'IN_TRANSIT_BORDER': 'shipping',
-    'AT_BORDER': 'shipping',
-    'WAREHOUSE_RU': 'shipping',
-    'IN_TRANSIT_RU': 'shipping',
+    // Этап оформления/выкупа
+    'REVIEW': 'dealing',
+    'APPLICATION': 'dealing',
+    'AWAITING_PAYMENT': 'dealing',
+    'PURCHASE': 'dealing',
+    // Склад в Корее
+    'TO_WAREHOUSE_KR': 'korea_warehouse',
+    'AT_WAREHOUSE_KR': 'korea_warehouse',
+    'DOCUMENTS': 'korea_warehouse',
+    'SHIPPING_PREP': 'korea_warehouse',
+    // В пути
+    'TO_BORDER': 'shipping',
+    'CUSTOMS': 'shipping',
+    'TO_WAREHOUSE_RU': 'shipping',
+    'TO_DESTINATION': 'shipping',
+    // Доставлен
     'DELIVERED': 'delivered',
   };
   return statusMap[status] || 'dealing';
@@ -293,10 +312,10 @@ export const api = {
       }
     },
 
-    create: async (carVin: string, totalPrice: number): Promise<Order | null> => {
+    create: async (carId: string, totalPrice: number): Promise<Order | null> => {
       try {
         const response = await apiClient.post('/orders/', {
-          car_vin: carVin,
+          car_id: carId,
           total_price: totalPrice,
         });
         return transformApiOrder(response.data);

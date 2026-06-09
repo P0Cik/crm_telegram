@@ -45,15 +45,22 @@ class RegistrationStates(StatesGroup):
 # Обертки для работы с БД
 @sync_to_async
 def get_or_create_user(telegram_id, username, first_name, last_name):
-    """Получить или создать пользователя"""
+    """Получить или создать пользователя по telegram_id"""
+    user = User.objects.filter(telegram_id=telegram_id).first()
+    if user:
+        return user, False
     user, created = User.objects.get_or_create(
         username=username,
         defaults={
+            'telegram_id': telegram_id,
             'first_name': first_name or "",
             'last_name': last_name or "",
             'role': User.Role.CLIENT
         }
     )
+    if not user.telegram_id:
+        user.telegram_id = telegram_id
+        user.save(update_fields=['telegram_id'])
     return user, created
 
 @sync_to_async
@@ -82,9 +89,9 @@ def get_user_subscriptions(user):
     ).select_related('brand', 'model'))
 
 @sync_to_async
-def get_car_by_vin(vin):
-    """Получить автомобиль по VIN"""
-    return Car.objects.filter(vin=vin).first()
+def get_car_by_id(car_id):
+    """Получить автомобиль по id"""
+    return Car.objects.select_related('brand', 'model').filter(id=car_id).first()
 
 @sync_to_async
 def create_order(user, car, price):
@@ -93,7 +100,7 @@ def create_order(user, car, price):
         user=user,
         car=car,
         total_price=price,
-        status=Order.Status.PROCESSING
+        status=Order.Status.REVIEW
     )
 
 @sync_to_async
@@ -244,16 +251,16 @@ async def show_catalog(message: types.Message):
                 f"⚡ {car.engine_power or 0} л.с. | {car.engine_volume or 0}л\n"
                 f"⛽ {car.get_fuel_type_display()}\n"
                 f"🎨 {car.color or 'не указан'}\n"
-                f"📍 {car.seller_country}\n"
-                f"VIN: `{car.vin}`"
+                f"📍 {car.region or car.seller_country}\n"
+                f"{('VIN: `' + car.vin + '`') if car.vin else ''}"
             )
 
             # Кнопки для действий
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
-                        InlineKeyboardButton(text="📝 Заказать", callback_data=f"order_{car.vin}"),
-                        InlineKeyboardButton(text="ℹ️ Подробнее", callback_data=f"details_{car.vin}")
+                        InlineKeyboardButton(text="📝 Заказать", callback_data=f"order_{car.id}"),
+                        InlineKeyboardButton(text="ℹ️ Подробнее", callback_data=f"details_{car.id}")
                     ]
                 ]
             )
@@ -289,12 +296,18 @@ async def show_orders(message: types.Message):
 
         for order in orders:
             status_emoji = {
-                'PROCESSING': '⏳',
-                'WAREHOUSE_KR': '🏭',
-                'IN_TRANSIT_BORDER': '🚚',
-                'AT_BORDER': '🛃',
-                'WAREHOUSE_RU': '📦',
-                'IN_TRANSIT_RU': '🚛',
+                'REVIEW': '⏳',
+                'APPLICATION': '📝',
+                'AWAITING_PAYMENT': '💳',
+                'PURCHASE': '🛒',
+                'TO_WAREHOUSE_KR': '🚚',
+                'AT_WAREHOUSE_KR': '🏭',
+                'DOCUMENTS': '📄',
+                'SHIPPING_PREP': '📦',
+                'TO_BORDER': '🛣️',
+                'CUSTOMS': '🛃',
+                'TO_WAREHOUSE_RU': '🚛',
+                'TO_DESTINATION': '🚐',
                 'DELIVERED': '✅',
                 'CANCELLED': '❌'
             }
@@ -413,10 +426,10 @@ async def show_profile(message: types.Message):
 @dp.callback_query(F.data.startswith("order_"))
 async def process_order_callback(callback: types.CallbackQuery):
     """Обработка заказа автомобиля"""
-    vin = callback.data.split("_")[1]
+    car_id = callback.data.split("_")[1]
 
     try:
-        car = await get_car_by_vin(vin)
+        car = await get_car_by_id(car_id)
         if not car:
             await callback.answer("Автомобиль не найден", show_alert=True)
             return

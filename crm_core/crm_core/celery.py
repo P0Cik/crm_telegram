@@ -15,13 +15,13 @@ app.autodiscover_tasks()
 
 # Периодические задачи
 app.conf.beat_schedule = {
-    'check-new-advertisements-every-hour': {
-        'task': 'cars.tasks.check_new_advertisements',
-        'schedule': crontab(minute=0, hour='*'),  # Каждый час
+    'sync-encar-profiles-every-30-min': {
+        'task': 'cars.tasks.sync_all_profiles',
+        'schedule': crontab(minute='*/30'),  # каждые 30 минут
     },
     'update-exchange-rates-daily': {
         'task': 'cars.tasks.update_exchange_rates',
-        'schedule': crontab(minute=0, hour=9),  # Каждый день в 9:00
+        'schedule': crontab(minute=0, hour=9),  # каждый день в 9:00
     },
 }
 

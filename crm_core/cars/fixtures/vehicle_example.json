@@ -1,0 +1,346 @@
+{
+  "manage": {
+    "dummy": false,
+    "dummyVehicleId": 41772569,
+    "reRegistered": true,
+    "webReserved": true,
+    "registDateTime": "2026-04-01T08:10:47",
+    "firstAdvertisedDateTime": "2026-06-02T07:56:06",
+    "modifyDateTime": "2026-06-02T07:56:06",
+    "subscribeCount": 6,
+    "viewCount": 594
+  },
+  "category": {
+    "type": "CAR",
+    "manufacturerCd": "012",
+    "manufacturerName": "BMW",
+    "modelCd": "066",
+    "modelName": "X5 (G05)",
+    "gradeCd": "006",
+    "gradeName": "xDrive 40i xLine",
+    "gradeEnglishName": "xDrive 40i xLine",
+    "yearMonth": "202204",
+    "formYear": "2022",
+    "domestic": false,
+    "importType": "REGULAR_IMPORT",
+    "originPrice": 10960,
+    "manufacturerEnglishName": "BMW",
+    "modelGroupCd": "008",
+    "modelGroupName": "X5",
+    "modelGroupEnglishName": "X5",
+    "gradeDetailCd": null,
+    "gradeDetailName": null,
+    "gradeDetailEnglishName": null,
+    "jatoVehicleId": 826929920210601,
+    "warranty": {
+      "userDefined": true,
+      "companyName": "보증사",
+      "bodyMonth": 24,
+      "bodyMileage": 999999,
+      "transmissionMonth": 36,
+      "transmissionMileage": 60000
+    }
+  },
+  "advertisement": {
+    "type": "CAR",
+    "price": 5490,
+    "status": "ADVERTISE",
+    "warrantyStyleColor": null,
+    "trust": ["Meetgo", "HomeService"],
+    "hotMark": [13, 14, 15],
+    "oneLineText": "엔카 실촬영",
+    "salesStatus": null,
+    "directInspected": false,
+    "preVerified": true,
+    "extendWarranty": false,
+    "deemedExtendWarranty": false,
+    "homeService": true,
+    "meetGo": true,
+    "preDelivery": false,
+    "leaseRentInfo": null,
+    "encarPassType": null,
+    "encarPassCategoryType": null,
+    "underBodyPhotos": [],
+    "hasUnderBodyPhoto": false,
+    "advertisementType": "NORMAL",
+    "diagnosisCar": false
+  },
+  "contact": {
+    "userId": "pj5213",
+    "userType": "DEALER",
+    "no": "05062226283",
+    "address": "서울 강서구 양천로 390",
+    "contactType": "MOBILE",
+    "isVerifyOwner": false,
+    "isOwnerPartner": true
+  },
+  "spec": {
+    "type": "CAR",
+    "mileage": 73998,
+    "displacement": 2998,
+    "transmissionName": "오토",
+    "fuelCd": "001",
+    "fuelName": "가솔린",
+    "colorName": "쥐색",
+    "customColor": null,
+    "seatCount": 7,
+    "tradeType": "D",
+    "tradeOwnerType": null,
+    "tradeCompanyName": null,
+    "bodyName": "SUV"
+  },
+  "photos": [
+    {
+      "code": "024",
+      "path": "/carpicture07/pic4177/41772560_024.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "005",
+      "path": "/carpicture07/pic4177/41772560_005.jpg",
+      "type": "OUTER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "003",
+      "path": "/carpicture07/pic4177/41772560_003.jpg",
+      "type": "OUTER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "009",
+      "path": "/carpicture07/pic4177/41772560_009.jpg",
+      "type": "INNER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "006",
+      "path": "/carpicture07/pic4177/41772560_006.jpg",
+      "type": "OUTER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "022",
+      "path": "/carpicture07/pic4177/41772560_022.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "015",
+      "path": "/carpicture07/pic4177/41772560_015.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "023",
+      "path": "/carpicture07/pic4177/41772560_023.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "002",
+      "path": "/carpicture07/pic4177/41772560_002.jpg",
+      "type": "OUTER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "007",
+      "path": "/carpicture07/pic4177/41772560_007.jpg",
+      "type": "INNER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "021",
+      "path": "/carpicture07/pic4177/41772560_021.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "010",
+      "path": "/carpicture07/pic4177/41772560_010.jpg",
+      "type": "INNER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "019",
+      "path": "/carpicture07/pic4177/41772560_019.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "017",
+      "path": "/carpicture07/pic4177/41772560_017.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "008",
+      "path": "/carpicture07/pic4177/41772560_008.jpg",
+      "type": "INNER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "016",
+      "path": "/carpicture07/pic4177/41772560_016.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "004",
+      "path": "/carpicture07/pic4177/41772560_004.jpg",
+      "type": "OUTER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "001",
+      "path": "/carpicture07/pic4177/41772560_001.jpg",
+      "type": "OUTER",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "020",
+      "path": "/carpicture07/pic4177/41772560_020.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    },
+    {
+      "code": "018",
+      "path": "/carpicture07/pic4177/41772560_018.jpg",
+      "type": "OPTION",
+      "updateDateTime": "2026-04-01T11:12:55",
+      "desc": null
+    }
+  ],
+  "options": {
+    "type": "CAR",
+    "standard": [
+      "001",
+      "002",
+      "004",
+      "005",
+      "006",
+      "007",
+      "008",
+      "010",
+      "014",
+      "015",
+      "017",
+      "019",
+      "020",
+      "021",
+      "022",
+      "023",
+      "024",
+      "026",
+      "027",
+      "030",
+      "031",
+      "032",
+      "033",
+      "035",
+      "051",
+      "055",
+      "056",
+      "057",
+      "058",
+      "059",
+      "062",
+      "063",
+      "072",
+      "075",
+      "079",
+      "080",
+      "081",
+      "082",
+      "083",
+      "084",
+      "085",
+      "086",
+      "087",
+      "088",
+      "092",
+      "094",
+      "095",
+      "096",
+      "097"
+    ],
+    "etc": [],
+    "choice": [],
+    "tuning": []
+  },
+  "condition": {
+    "accident": { "recordView": true, "resumeView": true },
+    "inspection": { "formats": ["TABLE"] },
+    "seizing": { "seizingCount": 0, "pledgeCount": 0 }
+  },
+  "partnership": {
+    "brand": null,
+    "testdrive": { "active": false },
+    "dealer": {
+      "userId": "pj5213",
+      "name": "방필재",
+      "firm": {
+        "code": "3608",
+        "name": "(주)예스오토",
+        "diag2Partnered": true,
+        "diagnosisCenters": [
+          {
+            "code": "032",
+            "name": "엔카진단센터 강서 오토플랙스",
+            "major": true,
+            "telephoneNumber": "02-2068-4223",
+            "address": "서울 강서구 양천로 390 강서오토플랙스 B126, 127호"
+          }
+        ],
+        "meetgoCenters": [
+          {
+            "code": "219",
+            "name": "엔카 안심거래존 서울 강서점",
+            "major": true,
+            "telephoneNumber": "050-6248-4193",
+            "address": "서울 강서구 양천로 390 강서오토플렉스 1층 103~106호"
+          }
+        ]
+      },
+      "visitReservation": false
+    },
+    "isPartneredVehicle": true,
+    "certifiedBrand": null,
+    "lease": null,
+    "rent": null
+  },
+  "contents": {
+    "text": "안녕하세요. 중고차 전문딜러 방필재 팀장 입니다. \n차량에 관심을 가져주셔서 대단히 감사합니다.\n현재 고객님께서 보시고있는 차량은 100% 실매물임을 약속 드립니다!\n\n----------------------차량설명--------------------------------- \n\n-차량설명: BMW X5 (G05) xDrive 40i xLine 등급 입니다\n\n-사고여부: 유사고 입니다 (엔카 성능 참조)\n\n-연      식: 2022년 4월 등록한 차량 입니다\n\n-색      상: 진한 쥐색에 브라운 시트 입니다\n\n-주행거리: 73,998 km 실 주행거리 입니다\n  \n-내 / 외관: 상품화 완료 하였으며 실 내외 시트 깨끗합니다\n\n-관리상태: 성능 점검 결과 특이사항 없으며 차량 관리 잘 되어있습니다\n\n▶옵션사항: 엔카 옵션표 참고 바랍니다\n\n\n▶차량의 특징: 차량 관리가 잘되어있으며 차량 컨디션 아주 좋습니다.\n\n\n\n▶문의방법 \n-연락주시면 친절하고 상세하게 설명을 드리도록 하겠습니다. 전화가 부재중일시 문자를 남겨주시면 확인후 전화드리겠습니다. \n-차량은 서울 가양동 강서오토플렉스 6층 매장에 전시되어 있습니다.\n-차량 시승도 가능하며 정비업소에서 차량상태 확인도 가능합니다.  \n-현재 타고 계신 차량과 교환도 가능하며, 저금리 상품을 이용한 대출을 통한 차량구매도 가능합니다.",
+    "meetGoText": null
+  },
+  "view": {
+    "encarDiagnosis": -1,
+    "encarMeetGo": -1,
+    "hasEvBatteryInfo": false,
+    "photoPlus": 1
+  },
+  "vehicleId": 41772560,
+  "vehicleType": "CAR",
+  "vin": "WBACR6107N9L31629",
+  "vehicleNo": "103서6702"
+}
