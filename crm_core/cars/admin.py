@@ -81,14 +81,14 @@ class ImportProfileAdmin(admin.ModelAdmin):
 
     @admin.action(description='Запустить импорт выбранных профилей')
     def run_import(self, request, queryset):
-        from .tasks import run_import_profile
+        from .tasks import sync_encar_profile
         count = 0
         for profile in queryset:
             try:
                 # Через Celery; если брокер недоступен — синхронно
-                run_import_profile.delay(profile.id)
+                sync_encar_profile.delay(profile.id)
             except Exception:
-                run_import_profile(profile.id)
+                sync_encar_profile(profile.id)
             count += 1
         self.message_user(request, f'Запущен импорт {count} профиля(ей)', messages.SUCCESS)
 

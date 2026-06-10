@@ -402,6 +402,6 @@ class ImportProfileViewSet(viewsets.ModelViewSet):
     def run(self, request, pk=None):
         """Запустить импорт профиля (через Celery)."""
         profile = self.get_object()
-        from .tasks import run_import_profile
-        run_import_profile.delay(profile.id)
+        from .tasks import sync_encar_profile
+        sync_encar_profile.delay(profile.id)
         return Response({'status': 'scheduled', 'profile_id': profile.id})

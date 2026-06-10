@@ -13,21 +13,21 @@ ENRICH_CHUNK = 50  # сколько id за один запрос к vehicles?ve
 
 
 @shared_task
-def run_all_import_profiles():
-    """Запускает импорт для всех активных профилей (celery-beat)."""
+def sync_all_profiles():
+    """Запускает синхронизацию для всех активных профилей (celery-beat)."""
     from .models import ImportProfile
 
     ids = list(ImportProfile.objects.filter(is_active=True).values_list("id", flat=True))
     for pid in ids:
-        run_import_profile.delay(pid)
-    logger.info("Запланирован импорт %s профилей", len(ids))
+        sync_encar_profile.delay(pid)
+    logger.info("Запланирована синхронизация %s профилей", len(ids))
     return f"scheduled {len(ids)} profiles"
 
 
 @shared_task
-def run_import_profile(profile_id):
+def sync_encar_profile(profile_id):
     """
-    Импортирует один профиль: тянет список Encar (страницами до 1000), апсертит
+    Синхронизирует один профиль: тянет список Encar (страницами до 1000), апсертит
     авто, обогащает новые/изменившиеся через групповой эндпоинт vehicles, при
     полном прогоне деактивирует пропавшие. На инкрементальном прогоне (после
     первичной полной выгрузки) применяет ранний останов: объявления отсортированы
