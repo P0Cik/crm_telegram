@@ -32,20 +32,20 @@ apiClient.interceptors.request.use((config) => {
 interface ApiCar {
   id: number;
   vin: string | null;
-  brand: { id: number; name: string };
+  brand: { id: number; name: string } | null;
+  model_group?: { id: number; name: string } | null;
   model: { id: number; name: string } | null;
-  model_group?: string;
   badge?: string;
   year: number;
   fuel_type: string;
   fuel_type_display?: string;
-  engine_volume: number;
-  engine_power: number;
+  engine_volume: number | null;
   transmission: string;
-  steering_wheel: string;
-  drive_type: string;
   color: string;
-  seller_country: string;
+  color_hex?: string;
+  body_type?: string;
+  sales_status?: string;
+  sales_status_display?: string;
   region?: string;
   price_won?: number;
   price_rub?: number;
@@ -67,6 +67,7 @@ interface ApiOrder {
 interface ApiSubscription {
   id: number;
   brand?: { id: number; name: string };
+  model_group?: { id: number; name: string };
   model?: { id: number; name: string };
   year_min?: number;
   year_max?: number;
@@ -76,15 +77,10 @@ interface ApiSubscription {
   mileage_max?: number;
   min_engine_volume?: string;
   max_engine_volume?: string;
-  min_engine_power?: number;
-  max_engine_power?: number;
   fuel_type?: string;
+  body_type?: string;
   transmission?: string;
-  steering_wheel?: string;
-  drive_type?: string;
   colors?: string;
-  country?: string;
-  condition?: string;
   status: string;
 }
 
@@ -92,21 +88,22 @@ interface ApiSubscription {
 const transformApiCar = (apiCar: ApiCar): Car => ({
   id: String(apiCar.id),
   make: apiCar.brand?.name ?? '',
-  model: apiCar.model?.name ?? apiCar.model_group ?? '',
+  model: apiCar.model?.name ?? apiCar.model_group?.name ?? '',
+  modelGroup: apiCar.model_group?.name ?? '',
   year: apiCar.year,
   priceWon: apiCar.price_won ?? 0,
   priceRub: apiCar.price_rub ?? 0,
   images: apiCar.images ?? [],
-  country: apiCar.seller_country,
+  // Страна продавца: регион Кореи (страна источника — KR)
+  country: apiCar.region || 'Южная Корея',
   dateAdded: new Date().toISOString(),
-  engineVolume: apiCar.engine_volume,
+  engineVolume: apiCar.engine_volume ?? 0,
   fuelType: (apiCar.fuel_type_display || apiCar.fuel_type || '').toLowerCase(),
-  gearbox: apiCar.transmission || 'автомат',
-  wheelPosition: apiCar.steering_wheel === 'LEFT' ? 'левый' : 'правый',
-  driveType: apiCar.drive_type || 'полный',
-  color: apiCar.color,
+  gearbox: apiCar.transmission || '',
+  color: apiCar.color || '',
+  bodyType: apiCar.body_type || '',
+  salesStatus: apiCar.sales_status_display || apiCar.sales_status || '',
   mileage: apiCar.mileage ?? 0,
-  power: apiCar.engine_power,
   vin: apiCar.vin ?? '',
 });
 
@@ -130,7 +127,7 @@ const transformApiSubscription = (apiSub: ApiSubscription): Subscription => {
   const transformed = {
     id: apiSub.id.toString(),
     make: apiSub.brand?.name || '',
-    model: apiSub.model?.name || '',
+    model: apiSub.model?.name || apiSub.model_group?.name || '',
     yearFrom: apiSub.year_min,
     yearTo: apiSub.year_max,
     priceRubFrom: apiSub.price_min ? parseFloat(apiSub.price_min) : undefined,
@@ -139,15 +136,9 @@ const transformApiSubscription = (apiSub: ApiSubscription): Subscription => {
     mileageTo: apiSub.mileage_max,
     engineVolumeFrom: apiSub.min_engine_volume ? parseFloat(apiSub.min_engine_volume) : undefined,
     engineVolumeTo: apiSub.max_engine_volume ? parseFloat(apiSub.max_engine_volume) : undefined,
-    powerFrom: apiSub.min_engine_power,
-    powerTo: apiSub.max_engine_power,
     fuelType: apiSub.fuel_type,
     gearbox: apiSub.transmission,
-    wheelPosition: apiSub.steering_wheel,
-    driveType: apiSub.drive_type,
     color: apiSub.colors,
-    country: apiSub.country,
-    condition: apiSub.condition,
   };
 
   return transformed;
@@ -278,8 +269,6 @@ export const api = {
             params.color = colorMap[filters.color.toLowerCase()] || filters.color;
         }
         if (filters.gearbox && filters.gearbox !== 'Все коробки') params.transmission = filters.gearbox;
-        if (filters.wheelPosition && filters.wheelPosition !== 'Все варианты') params.steering_wheel = filters.wheelPosition === 'левый' ? 'LEFT' : 'RIGHT';
-        if (filters.driveType && filters.driveType !== 'Все приводы') params.drive_type = filters.driveType;
         if (filters.priceFrom) params.price_min = parseFloat(filters.priceFrom) * 1000000;
         if (filters.priceTo) params.price_max = parseFloat(filters.priceTo) * 1000000;
 
@@ -299,10 +288,8 @@ export const api = {
           year: car.year,
           fuel_type: car.fuelType?.toUpperCase(),
           engine_volume: car.engineVolume,
-          engine_power: car.power,
           transmission: car.gearbox,
           color: car.color,
-          seller_country: car.country,
         });
         return transformApiCar(response.data);
       } catch (error) {
@@ -421,15 +408,9 @@ export const api = {
           mileage_max: subscription.mileageTo,
           min_engine_volume: subscription.engineVolumeFrom,
           max_engine_volume: subscription.engineVolumeTo,
-          min_engine_power: subscription.powerFrom,
-          max_engine_power: subscription.powerTo,
           fuel_type: subscription.fuelType,
           transmission: subscription.gearbox,
-          steering_wheel: subscription.wheelPosition,
-          drive_type: subscription.driveType,
           colors: subscription.color,
-          country: subscription.country,
-          condition: subscription.condition,
         };
 
         const response = await apiClient.post('/search-requests/', requestData);
@@ -487,15 +468,9 @@ export const api = {
           mileage_max: subscription.mileageTo,
           min_engine_volume: subscription.engineVolumeFrom,
           max_engine_volume: subscription.engineVolumeTo,
-          min_engine_power: subscription.powerFrom,
-          max_engine_power: subscription.powerTo,
           fuel_type: subscription.fuelType,
           transmission: subscription.gearbox,
-          steering_wheel: subscription.wheelPosition,
-          drive_type: subscription.driveType,
           colors: subscription.color,
-          country: subscription.country,
-          condition: subscription.condition,
         };
 
         const response = await apiClient.patch(`/search-requests/${id}/`, requestData);

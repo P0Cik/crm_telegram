@@ -519,7 +519,7 @@ export default function AdminCRM({
                     <div>
                       <span className="font-bold text-slate-800">{c.make} {c.model}</span>
                       <span className="text-[10px] text-slate-400 font-mono block">
-                        {c.year} • {c.engineVolume}л • {c.power}л.с. • {c.color}
+                        {c.year} • {c.engineVolume}л • {c.color}
                       </span>
                       <span className="text-[10px] text-slate-300 font-mono block mt-0.5">
                         VIN: {c.vin} • {(c as any).mileage?.toLocaleString() || 0} км

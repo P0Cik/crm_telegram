@@ -71,16 +71,9 @@ export default function ListingsScreen({
     if (numVolFrom > 0 && car.engineVolume < numVolFrom) return false;
     if (numVolTo < 99 && car.engineVolume > numVolTo) return false;
 
-    const numHpFrom = parseInt(filters.powerFrom) || 0;
-    const numHpTo = parseInt(filters.powerTo) || 9999;
-    if (numHpFrom > 0 && car.power < numHpFrom) return false;
-    if (numHpTo < 9999 && car.power > numHpTo) return false;
-
     // Categories
     if (filters.fuelType && filters.fuelType !== 'Все виды' && car.fuelType !== filters.fuelType) return false;
     if (filters.gearbox && filters.gearbox !== 'Все коробки' && car.gearbox !== filters.gearbox) return false;
-    if (filters.wheelPosition && filters.wheelPosition !== 'Все варианты' && car.wheelPosition !== filters.wheelPosition) return false;
-    if (filters.driveType && filters.driveType !== 'Все приводы' && car.driveType !== filters.driveType) return false;
     if (filters.color && filters.color !== 'Все цвета' && car.color !== filters.color) return false;
 
     return true;
@@ -250,7 +243,7 @@ export default function ListingsScreen({
                     
                     {/* Technical spec details bullets list */}
                     <p className="text-xs text-slate-500 font-mono mt-1 leading-relaxed">
-                      {car.engineVolume.toFixed(1)} л • {car.power} л.с. • {car.fuelType} • {car.gearbox} • {car.driveType} привод • {car.mileage.toLocaleString()} км
+                      {car.engineVolume ? `${car.engineVolume.toFixed(1)} л • ` : ''}{car.fuelType} • {car.gearbox}{car.bodyType ? ` • ${car.bodyType}` : ''} • {car.mileage.toLocaleString()} км
                     </p>
                   </div>
 

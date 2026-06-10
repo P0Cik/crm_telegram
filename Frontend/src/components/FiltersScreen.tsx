@@ -23,9 +23,7 @@ export default function FiltersScreen({
   // Multi-option catalog choices
   const FUEL_TYPES = ['Все виды', 'бензин', 'дизель', 'гибрид', 'электро'];
   const GEARBOX_TYPES = ['Все коробки', 'автомат', 'робот', 'механика'];
-  const DRIVETRAIN_TYPES = ['Все приводы', 'передний', 'задний', 'полный'];
   const COLORS = ['Все цвета', 'белый', 'черный', 'серый', 'синий', 'красный'];
-  const WHEEL_POSITIONS = ['Все варианты', 'левый', 'правый'];
 
   const toggleSection = (section: string) => {
     setExpandedSection(prev => prev === section ? null : section);
@@ -74,16 +72,9 @@ export default function FiltersScreen({
       if (numVolFrom > 0 && car.engineVolume < numVolFrom) return false;
       if (numVolTo < 99 && car.engineVolume > numVolTo) return false;
 
-      const numHpFrom = parseInt(filters.powerFrom) || 0;
-      const numHpTo = parseInt(filters.powerTo) || 9999;
-      if (numHpFrom > 0 && car.power < numHpFrom) return false;
-      if (numHpTo < 9999 && car.power > numHpTo) return false;
-
       // Categorical string matches
       if (filters.fuelType && filters.fuelType !== 'Все виды' && car.fuelType !== filters.fuelType) return false;
       if (filters.gearbox && filters.gearbox !== 'Все коробки' && car.gearbox !== filters.gearbox) return false;
-      if (filters.wheelPosition && filters.wheelPosition !== 'Все варианты' && car.wheelPosition !== filters.wheelPosition) return false;
-      if (filters.driveType && filters.driveType !== 'Все приводы' && car.driveType !== filters.driveType) return false;
       if (filters.color && filters.color !== 'Все цвета' && car.color !== filters.color) return false;
 
       return true;
@@ -230,24 +221,6 @@ export default function FiltersScreen({
                     className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
                   />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-mono w-14">Мощность л.с.</span>
-                  <input
-                    type="number"
-                    value={filters.powerFrom}
-                    onChange={(e) => setFilters(p => ({ ...p, powerFrom: e.target.value }))}
-                    placeholder="100"
-                    className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
-                  />
-                  <input
-                    type="number"
-                    value={filters.powerTo}
-                    onChange={(e) => setFilters(p => ({ ...p, powerTo: e.target.value }))}
-                    placeholder="300"
-                    className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
-                  />
-                </div>
               </div>
             )}
           </div>
@@ -306,66 +279,6 @@ export default function FiltersScreen({
                     }`}
                   >
                     {box === 'Все коробки' ? 'Все коробки' : box.charAt(0).toUpperCase() + box.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Drivetrain options */}
-          <div className="p-4 space-y-3">
-            <button
-              onClick={() => toggleSection('drive')}
-              className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
-            >
-              <span>Привод трансмиссии</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.driveType}</span>
-            </button>
-
-            {expandedSection === 'drive' && (
-              <div className="flex flex-wrap gap-1.5 pt-2">
-                {DRIVETRAIN_TYPES.map((drive) => (
-                  <button
-                    key={drive}
-                    type="button"
-                    onClick={() => setFilters(p => ({ ...p, driveType: drive }))}
-                    className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.driveType === drive
-                        ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
-                    }`}
-                  >
-                    {drive === 'Все приводы' ? 'Все приводы' : drive.charAt(0).toUpperCase() + drive.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Steering wheel hand */}
-          <div className="p-4 space-y-3">
-            <button
-              onClick={() => toggleSection('wheel')}
-              className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
-            >
-              <span>Расположение руля</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.wheelPosition}</span>
-            </button>
-
-            {expandedSection === 'wheel' && (
-              <div className="flex flex-wrap gap-1.5 pt-2">
-                {WHEEL_POSITIONS.map((pos) => (
-                  <button
-                    key={pos}
-                    type="button"
-                    onClick={() => setFilters(p => ({ ...p, wheelPosition: pos }))}
-                    className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.wheelPosition === pos
-                        ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
-                    }`}
-                  >
-                    {pos === 'Все варианты' ? 'Любой руль' : pos.toUpperCase() + ' руль'}
                   </button>
                 ))}
               </div>

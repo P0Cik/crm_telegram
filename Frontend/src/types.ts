@@ -2,6 +2,7 @@ export interface Car {
   id: string;
   make: string;
   model: string;
+  modelGroup?: string;
   year: number;
   priceWon: number;
   priceRub: number;
@@ -11,13 +12,17 @@ export interface Car {
   engineVolume: number; // in liters, e.g. 1.5
   fuelType: string; // "бензин" | "дизель" | "гибрид" | "электро"
   gearbox: string; // "робот" | "автомат" | "механика"
-  wheelPosition: string; // "левый" | "правый"
-  driveType: string; // "передний" | "задний" | "полный"
   color: string;
   mileage: number; // in km
-  power: number; // in hp
+  bodyType?: string;
+  salesStatus?: string;
   vin: string;
   isPopular?: boolean;
+  // Поля ниже отсутствуют в источнике Encar — оставлены опциональными
+  // для обратной совместимости (не заполняются API).
+  wheelPosition?: string;
+  driveType?: string;
+  power?: number;
 }
 
 export interface Checkpoint {

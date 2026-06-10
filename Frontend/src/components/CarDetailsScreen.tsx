@@ -149,7 +149,7 @@ export default function CarDetailsScreen({
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
             <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Двигатель</span>
-            <span className="text-sm font-bold text-slate-800">{car.engineVolume.toFixed(1)} л ({car.power} л.с.)</span>
+            <span className="text-sm font-bold text-slate-800">{car.engineVolume ? `${car.engineVolume.toFixed(1)} л` : '—'}</span>
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
@@ -163,8 +163,8 @@ export default function CarDetailsScreen({
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
-            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Привод</span>
-            <span className="text-sm font-bold text-slate-800 capitalize">{car.driveType}</span>
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Тип кузова</span>
+            <span className="text-sm font-bold text-slate-800 capitalize">{car.bodyType || '—'}</span>
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
@@ -173,8 +173,8 @@ export default function CarDetailsScreen({
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
-            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Расположение руля</span>
-            <span className="text-sm font-bold text-slate-800 uppercase">{car.wheelPosition}</span>
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Статус</span>
+            <span className="text-sm font-bold text-slate-800">{car.salesStatus || '—'}</span>
           </div>
         </div>
 

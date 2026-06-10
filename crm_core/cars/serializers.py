@@ -1,12 +1,13 @@
 from rest_framework import serializers
 from .models import (
     Brand,
+    ModelGroup,
     Model,
     User,
     Car,
     CarPhoto,
     SearchRequest,
-    SearchProfile,
+    ImportProfile,
     Order,
     OrderStatusHistory,
 )
@@ -14,23 +15,50 @@ from django.utils import timezone
 
 
 class BrandSerializer(serializers.ModelSerializer):
+    # name — основное отображение каталога (английский)
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = Brand
-        fields = ['id', 'name', 'name_ru', 'name_en']
+        fields = ['id', 'name', 'name_en', 'name_ru', 'name_ko']
+
+    def get_name(self, obj):
+        return obj.display_name('en')
 
 
-class ModelSerializer(serializers.ModelSerializer):
+class ModelGroupSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
     brand = BrandSerializer(read_only=True)
     brand_id = serializers.PrimaryKeyRelatedField(
-        queryset=Brand.objects.all(),
-        source='brand',
-        write_only=True,
-        required=False
+        queryset=Brand.objects.all(), source='brand', write_only=True, required=False
     )
 
     class Meta:
+        model = ModelGroup
+        fields = ['id', 'name', 'name_en', 'name_ru', 'name_ko', 'brand', 'brand_id']
+
+    def get_name(self, obj):
+        return obj.display_name('en')
+
+
+class ModelSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    model_group = ModelGroupSerializer(read_only=True)
+    model_group_id = serializers.PrimaryKeyRelatedField(
+        queryset=ModelGroup.objects.all(), source='model_group', write_only=True, required=False
+    )
+    # brand для удобства фронтенда (модель -> марка через группу)
+    brand = serializers.SerializerMethodField()
+
+    class Meta:
         model = Model
-        fields = ['id', 'name', 'model_group', 'brand', 'brand_id']
+        fields = ['id', 'name', 'name_en', 'name_ru', 'name_ko', 'model_group', 'model_group_id', 'brand']
+
+    def get_name(self, obj):
+        return obj.display_name('en')
+
+    def get_brand(self, obj):
+        return BrandSerializer(obj.model_group.brand).data if obj.model_group_id else None
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -85,6 +113,7 @@ class CarPhotoSerializer(serializers.ModelSerializer):
 
 class CarSerializer(serializers.ModelSerializer):
     brand = BrandSerializer(read_only=True)
+    model_group = ModelGroupSerializer(read_only=True)
     model = ModelSerializer(read_only=True)
     brand_id = serializers.PrimaryKeyRelatedField(
         queryset=Brand.objects.all(), source='brand', write_only=True, required=False
@@ -93,24 +122,22 @@ class CarSerializer(serializers.ModelSerializer):
         queryset=Model.objects.all(), source='model', write_only=True, required=False
     )
     fuel_type_display = serializers.SerializerMethodField()
-    steering_wheel_display = serializers.SerializerMethodField()
-    # Данные текущего объявления + фото — закрывают контракт фронтенда
+    sales_status_display = serializers.SerializerMethodField()
+    # Цена: исходная в вонах + вычисляемая в рублях (по текущему курсу)
     price_won = serializers.IntegerField(source='price_krw', read_only=True)
-    price_rub = serializers.DecimalField(source='car_price', max_digits=14, decimal_places=2, read_only=True)
-    mileage = serializers.IntegerField(read_only=True)
-    model_group = serializers.CharField(source='model.model_group', read_only=True)
+    price_rub = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
 
     class Meta:
         model = Car
         fields = [
             'id', 'source', 'external_id', 'source_url', 'is_active',
-            'vin', 'brand', 'model', 'model_group', 'badge',
+            'vin', 'brand', 'model_group', 'model', 'badge',
             'year', 'year_month', 'fuel_type', 'fuel_type_display',
-            'engine_volume', 'engine_power', 'transmission', 'steering_wheel',
-            'steering_wheel_display', 'drive_type', 'color', 'color_hex', 'body_type',
-            'seat_count', 'region', 'seller_country', 'manufacturer_country',
-            'origin_price_man', 'description_ko', 'description_ru',
+            'engine_volume', 'transmission', 'color', 'color_hex', 'body_type',
+            'seat_count', 'region', 'sales_status', 'sales_status_display',
+            'has_accident_record', 'origin_price_krw',
+            'description_ko', 'description_ru',
             'price_won', 'price_rub', 'mileage', 'images',
             'brand_id', 'model_id',
         ]
@@ -118,8 +145,13 @@ class CarSerializer(serializers.ModelSerializer):
     def get_fuel_type_display(self, obj):
         return obj.get_fuel_type_display()
 
-    def get_steering_wheel_display(self, obj):
-        return obj.get_steering_wheel_display() if obj.steering_wheel else None
+    def get_sales_status_display(self, obj):
+        return obj.get_sales_status_display()
+
+    def get_price_rub(self, obj):
+        rate = self.context.get('krw_rub_rate')
+        value = obj.price_rub(rate=rate)
+        return float(value) if value is not None else None
 
     def get_images(self, obj):
         return [p.url for p in obj.photos.all()]
@@ -132,13 +164,16 @@ class CarSerializer(serializers.ModelSerializer):
         return data
 
 
-
 class SearchRequestSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     brand = BrandSerializer(read_only=True)
+    model_group = ModelGroupSerializer(read_only=True)
     model = ModelSerializer(read_only=True)
     brand_id = serializers.PrimaryKeyRelatedField(
         queryset=Brand.objects.all(), source='brand', write_only=True, required=False, allow_null=True
+    )
+    model_group_id = serializers.PrimaryKeyRelatedField(
+        queryset=ModelGroup.objects.all(), source='model_group', write_only=True, required=False, allow_null=True
     )
     model_id = serializers.PrimaryKeyRelatedField(
         queryset=Model.objects.all(), source='model', write_only=True, required=False, allow_null=True
@@ -148,11 +183,10 @@ class SearchRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = SearchRequest
         fields = [
-            'id', 'user', 'brand', 'model', 'year_min', 'year_max', 'mileage_min',
-            'mileage_max', 'min_engine_volume', 'max_engine_volume', 'min_engine_power',
-            'max_engine_power', 'fuel_type', 'condition', 'price_min', 'price_max',
-            'transmission', 'steering_wheel', 'drive_type', 'colors', 'country',
-            'status', 'status_display', 'brand_id', 'model_id'
+            'id', 'user', 'brand', 'model_group', 'model', 'year_min', 'year_max',
+            'mileage_min', 'mileage_max', 'min_engine_volume', 'max_engine_volume',
+            'fuel_type', 'body_type', 'price_min', 'price_max', 'transmission', 'colors',
+            'status', 'status_display', 'brand_id', 'model_group_id', 'model_id'
         ]
         read_only_fields = ['user']
 
@@ -164,14 +198,25 @@ class SearchRequestSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class SearchProfileSerializer(serializers.ModelSerializer):
+class ImportProfileSerializer(serializers.ModelSerializer):
+    brand = BrandSerializer(read_only=True)
+    model_group = ModelGroupSerializer(read_only=True)
+    brand_id = serializers.PrimaryKeyRelatedField(
+        queryset=Brand.objects.all(), source='brand', write_only=True
+    )
+    model_group_id = serializers.PrimaryKeyRelatedField(
+        queryset=ModelGroup.objects.all(), source='model_group', write_only=True,
+        required=False, allow_null=True
+    )
+
     class Meta:
-        model = SearchProfile
+        model = ImportProfile
         fields = [
-            'id', 'name', 'source', 'manufacturer', 'model_group', 'extra_q',
-            'max_pages', 'is_active', 'last_run_at', 'created_at'
+            'id', 'name', 'source', 'brand', 'brand_id', 'model_group', 'model_group_id',
+            'extra_q', 'page_size', 'max_pages', 'backfill_completed', 'is_active',
+            'last_run_at', 'created_at'
         ]
-        read_only_fields = ['last_run_at', 'created_at']
+        read_only_fields = ['last_run_at', 'created_at', 'backfill_completed']
 
 
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
@@ -232,6 +277,7 @@ class OrderSerializer(serializers.ModelSerializer):
         queryset=Car.objects.all(), source='car', write_only=True, required=False
     )
     car_vin = serializers.CharField(write_only=True, required=False)
+    total_price = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
 
     class Meta:
         model = Order
@@ -247,11 +293,11 @@ class OrderSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Если передан car_vin вместо car_id — резолвим
         if 'car' not in data and data.get('car_vin'):
-            try:
-                data['car'] = Car.objects.filter(vin=data['car_vin']).first() or \
-                    Car.objects.get(external_id=data['car_vin'])
-            except Car.DoesNotExist:
+            car = (Car.objects.filter(vin=data['car_vin']).first()
+                   or Car.objects.filter(external_id=data['car_vin']).first())
+            if not car:
                 raise serializers.ValidationError({'car_vin': 'Автомобиль не найден'})
+            data['car'] = car
         if 'car' not in data:
             raise serializers.ValidationError({'car_id': 'Укажите автомобиль (car_id или car_vin)'})
         return data
@@ -260,5 +306,6 @@ class OrderSerializer(serializers.ModelSerializer):
         validated_data.pop('car_vin', None)
         validated_data['user'] = self.context['request'].user
         if not validated_data.get('total_price'):
-            validated_data['total_price'] = validated_data['car'].car_price or 0
+            # Снапшот цены в рублях на момент оформления
+            validated_data['total_price'] = validated_data['car'].price_rub() or 0
         return super().create(validated_data)

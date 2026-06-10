@@ -2,19 +2,29 @@
 Преобразование JSON-ответов Encar в плоские структуры для сохранения в БД.
 
 Функции возвращают обычные словари (без обращения к БД), чтобы их было удобно
-тестировать на фикстурах. Запись в БД выполняет слой задач (cars/tasks.py).
+тестировать на фикстурах. Запись в БД выполняет слой синхронизации (encar/sync.py).
+
+Цена возвращается только в исходной валюте (воны, KRW). Конвертация в рубли —
+по требованию (см. cars/currency.py), здесь не выполняется.
 """
 from __future__ import annotations
 
 import logging
-
-from django.conf import settings
 
 from . import normalization as norm
 
 logger = logging.getLogger(__name__)
 
 MAN = 10_000  # 1 만원 = 10 000 KRW (вон)
+
+# SalesStatus из Encar -> наш canonical-код (Car.SalesStatus)
+SALES_STATUS_MAP = {
+    "": "ON_SALE",
+    "ADVERTISE": "ON_SALE",
+    "CONTRACT": "CONTRACT",
+    "SOLDOUT": "SOLD",
+    "SOLD": "SOLD",
+}
 
 
 def man_to_won(price_man) -> int | None:
@@ -27,12 +37,11 @@ def man_to_won(price_man) -> int | None:
         return None
 
 
-def won_to_rub(price_won) -> float | None:
-    """Воны (KRW) -> рубли по курсу KRW_RUB_RATE из настроек."""
-    if price_won is None:
-        return None
-    rate = float(getattr(settings, "KRW_RUB_RATE", 0.065))
-    return round(price_won * rate, 2)
+def normalize_sales_status(value) -> str:
+    """SalesStatus Encar -> canonical (ON_SALE по умолчанию)."""
+    if not value:
+        return "ON_SALE"
+    return SALES_STATUS_MAP.get(str(value).strip().upper(), "ON_SALE")
 
 
 def detail_url(external_id) -> str:
@@ -70,8 +79,7 @@ def parse_list_item(item: dict) -> dict | None:
     except (TypeError, ValueError):
         year = 0
 
-    price_man = item.get("Price")
-    price_won = man_to_won(price_man)
+    price_won = man_to_won(item.get("Price"))
 
     photos = []
     for ph in item.get("Photos", []) or []:
@@ -99,11 +107,10 @@ def parse_list_item(item: dict) -> dict | None:
         "color_raw": item.get("Color", "") or "",
         "color_hex": _first_hex(item.get("ColorExpression")),
         "region": region_ru,
-        "price_man": int(round(float(price_man))) if price_man not in (None, "") else None,
+        "region_raw": item.get("OfficeCityState", "") or "",
         "price_won": price_won,
-        "price_rub": won_to_rub(price_won),
         "mileage": int(item.get("Mileage") or 0),
-        "sales_status": item.get("SalesStatus", "") or "",
+        "sales_status": normalize_sales_status(item.get("SalesStatus")),
         "source_url": detail_url(external_id),
         "photos": photos,
         # сырьё для source_metadata
@@ -131,6 +138,7 @@ def parse_detail(vehicle: dict) -> dict:
     contents = vehicle.get("contents", {}) or {}
     options = vehicle.get("options", {}) or {}
     advertisement = vehicle.get("advertisement", {}) or {}
+    condition = vehicle.get("condition", {}) or {}
 
     fuel_code, fuel_ru, _ = norm.normalize_fuel(spec.get("fuelName", ""))
     trans_code, trans_ru, _ = norm.normalize_transmission(spec.get("transmissionName", ""))
@@ -147,15 +155,27 @@ def parse_detail(vehicle: dict) -> dict:
                 "category": ph.get("type", "") or "",
             })
 
+    accident = condition.get("accident", {}) or {}
+    has_accident = None
+    if accident:
+        has_accident = bool(accident.get("recordView") or accident.get("resumeView"))
+
     result = {
         "external_id": str(vehicle.get("vehicleId")),
         "vin": vehicle.get("vin") or None,
+        # каталог: корейское название + английское (из *EnglishName)
         "brand_name": category.get("manufacturerName", "") or "",
-        "model_name": category.get("modelName", "") or "",
+        "brand_name_en": category.get("manufacturerEnglishName", "") or "",
+        "brand_code": category.get("manufacturerCd", "") or "",
         "model_group": category.get("modelGroupName", "") or "",
+        "model_group_en": category.get("modelGroupEnglishName", "") or "",
+        "model_group_code": category.get("modelGroupCd", "") or "",
+        "model_name": category.get("modelName", "") or "",
+        "model_name_en": category.get("modelEnglishName", "") or "",
+        "model_code": category.get("modelCd", "") or "",
         "badge": category.get("gradeName", "") or "",
         "year_month": int(category["yearMonth"]) if category.get("yearMonth") else None,
-        "origin_price_man": category.get("originPrice"),
+        "origin_price_won": man_to_won(category.get("originPrice")),
         "fuel_type": fuel_code,
         "fuel_type_raw": spec.get("fuelName", "") or "",
         "transmission": trans_ru,
@@ -165,15 +185,14 @@ def parse_detail(vehicle: dict) -> dict:
         "color_raw": spec.get("colorName", "") or "",
         "body_type": body_ru,
         "seat_count": spec.get("seatCount"),
+        "has_accident_record": has_accident,
         "description_ko": contents.get("text", "") or "",
         "listed_at": manage.get("firstAdvertisedDateTime") or manage.get("registDateTime"),
         "modified_at": manage.get("modifyDateTime"),
         "photos": photos,
         "option_codes": options.get("standard", []) or [],
-        # цена и пробег для объявления
-        "price_man": advertisement.get("price"),
+        "sales_status": normalize_sales_status(advertisement.get("salesStatus")),
         "price_won": man_to_won(advertisement.get("price")),
-        "price_rub": won_to_rub(man_to_won(advertisement.get("price"))),
         "mileage": spec.get("mileage"),
         "vehicle_no": vehicle.get("vehicleNo", ""),
     }

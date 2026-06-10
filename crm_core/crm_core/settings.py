@@ -15,9 +15,10 @@ AUTH_USER_MODEL = 'cars.User'
 SECRET_KEY = environ.get('DJANGO_SECRET_KEY', 'django-insecure-x4g2^=fnt2)najph0oqqjrm(*55ued##dix68hy1e^ez751*1b')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = environ.get('DEBUG', 'True') == 'True'
+# Безопасный дефолт — выключено; локальная разработка включает DEBUG=True в .env.
+DEBUG = environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = environ.get('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Добавляем поддержку Cloudflare Tunnel
 if environ.get('CLOUDFLARE_TUNNEL'):
@@ -94,7 +95,7 @@ SPECTACULAR_SETTINGS = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=int(environ.get('JWT_ACCESS_HOURS', '24'))),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
@@ -242,12 +243,10 @@ CELERY_TIMEZONE = TIME_ZONE
 TELEGRAM_BOT_TOKEN = environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_WEBHOOK_URL = environ.get('TELEGRAM_WEBHOOK_URL', '')
 # Разрешить вход без проверки подписи initData (ТОЛЬКО для локальной разработки!)
-TELEGRAM_AUTH_DEV_BYPASS = environ.get('TELEGRAM_AUTH_DEV_BYPASS', 'True') == 'True'
+# Безопасный дефолт — выключено.
+TELEGRAM_AUTH_DEV_BYPASS = environ.get('TELEGRAM_AUTH_DEV_BYPASS', 'False') == 'True'
 # Время жизни initData (сек) для защиты от повторного использования
 TELEGRAM_AUTH_TTL = int(environ.get('TELEGRAM_AUTH_TTL', '86400'))
-
-# Parser Service
-PARSER_API_KEY = environ.get('PARSER_API_KEY', 'default-parser-key')
 
 # --- Источник данных Encar ---
 ENCAR_BASE_URL = environ.get('ENCAR_BASE_URL', 'https://api.encar.com')
@@ -255,8 +254,25 @@ ENCAR_IMAGE_BASE = environ.get('ENCAR_IMAGE_BASE', 'https://ci.encar.com')
 ENCAR_REQUEST_DELAY = float(environ.get('ENCAR_REQUEST_DELAY', '1.0'))
 
 # --- Курс валют ---
-# RUB за 1 KRW (вон). Обновляется задачей update_exchange_rates.
-KRW_RUB_RATE = float(environ.get('KRW_RUB_RATE', '0.065'))
+# Запасной курс RUB за 1 KRW (вон): используется, только если в БД ещё нет курса.
+# Актуальный курс хранится в модели ExchangeRate и обновляется update_exchange_rates.
+KRW_RUB_RATE_FALLBACK = environ.get('KRW_RUB_RATE_FALLBACK', '0.065')
+
+# --- Кэш (курс валют и пр.) ---
+_REDIS_URL = environ.get('REDIS_URL', '')
+if _REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': _REDIS_URL,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

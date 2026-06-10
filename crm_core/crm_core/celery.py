@@ -15,9 +15,13 @@ app.autodiscover_tasks()
 
 # Периодические задачи
 app.conf.beat_schedule = {
-    'sync-encar-profiles-every-30-min': {
-        'task': 'cars.tasks.sync_all_profiles',
+    'run-import-profiles-every-30-min': {
+        'task': 'cars.tasks.run_all_import_profiles',
         'schedule': crontab(minute='*/30'),  # каждые 30 минут
+    },
+    'sync-catalog-daily': {
+        'task': 'cars.tasks.sync_catalog',
+        'schedule': crontab(minute=30, hour=8),  # каждый день в 8:30
     },
     'update-exchange-rates-daily': {
         'task': 'cars.tasks.update_exchange_rates',
