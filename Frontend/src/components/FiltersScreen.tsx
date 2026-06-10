@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, X, ChevronDown, ChevronUp, Sliders } from 'lucide-react';
 import { SearchFilters, Car } from '../types';
 
 interface FiltersScreenProps {
@@ -23,9 +23,7 @@ export default function FiltersScreen({
   // Multi-option catalog choices
   const FUEL_TYPES = ['Все виды', 'бензин', 'дизель', 'гибрид', 'электро'];
   const GEARBOX_TYPES = ['Все коробки', 'автомат', 'робот', 'механика'];
-  const DRIVETRAIN_TYPES = ['Все приводы', 'передний', 'задний', 'полный'];
   const COLORS = ['Все цвета', 'белый', 'черный', 'серый', 'синий', 'красный'];
-  const WHEEL_POSITIONS = ['Все варианты', 'левый', 'правый'];
 
   const toggleSection = (section: string) => {
     setExpandedSection(prev => prev === section ? null : section);
@@ -49,8 +47,8 @@ export default function FiltersScreen({
   useEffect(() => {
     const matched = catalog.filter(car => {
       // Make / Model checks
-      if (filters.make && car.make.toLowerCase() !== filters.make.toLowerCase()) return false;
-      if (filters.model && car.model.toLowerCase() !== filters.model.toLowerCase()) return false;
+      if (filters.make && !['Все марки', 'Любая марка', ''].includes(filters.make) && car.make.toLowerCase() !== filters.make.toLowerCase()) return false;
+      if (filters.model && !['Все модели', 'Любая модель', ''].includes(filters.model) && !car.model.toLowerCase().includes(filters.model.toLowerCase())) return false;
 
       // Condition checking
       if (filters.condition === 'new' && car.mileage > 100) return false;
@@ -65,23 +63,19 @@ export default function FiltersScreen({
       const numPriceFrom = parseFloat(filters.priceFrom) || 0;
       const numPriceTo = parseFloat(filters.priceTo) || 9999;
       const priceRubMillion = car.priceRub / 1000000;
-      if (priceRubMillion < numPriceFrom || priceRubMillion > numPriceTo) return false;
+      if (numPriceFrom > 0 && priceRubMillion < numPriceFrom) return false;
+      if (numPriceTo < 9999 && priceRubMillion > numPriceTo) return false;
 
       // Engine parameters
       const numVolFrom = parseFloat(filters.engineVolumeFrom) || 0;
       const numVolTo = parseFloat(filters.engineVolumeTo) || 99;
-      if (car.engineVolume < numVolFrom || car.engineVolume > numVolTo) return false;
-
-      const numHpFrom = parseInt(filters.powerFrom) || 0;
-      const numHpTo = parseInt(filters.powerTo) || 9999;
-      if (car.power < numHpFrom || car.power > numHpTo) return false;
+      if (numVolFrom > 0 && car.engineVolume < numVolFrom) return false;
+      if (numVolTo < 99 && car.engineVolume > numVolTo) return false;
 
       // Categorical string matches
-      if (filters.fuelType !== 'Все виды' && car.fuelType !== filters.fuelType) return false;
-      if (filters.gearbox !== 'Все коробки' && car.gearbox !== filters.gearbox) return false;
-      if (filters.wheelPosition !== 'Все варианты' && car.wheelPosition !== filters.wheelPosition) return false;
-      if (filters.driveType !== 'Все приводы' && car.driveType !== filters.driveType) return false;
-      if (filters.color !== 'Все цвета' && car.color !== filters.color) return false;
+      if (filters.fuelType && filters.fuelType !== 'Все виды' && car.fuelType !== filters.fuelType) return false;
+      if (filters.gearbox && filters.gearbox !== 'Все коробки' && car.gearbox !== filters.gearbox) return false;
+      if (filters.color && filters.color !== 'Все цвета' && car.color !== filters.color) return false;
 
       return true;
     });
@@ -227,24 +221,6 @@ export default function FiltersScreen({
                     className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
                   />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-mono w-14">Мощность л.с.</span>
-                  <input
-                    type="number"
-                    value={filters.powerFrom}
-                    onChange={(e) => setFilters(p => ({ ...p, powerFrom: e.target.value }))}
-                    placeholder="100"
-                    className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
-                  />
-                  <input
-                    type="number"
-                    value={filters.powerTo}
-                    onChange={(e) => setFilters(p => ({ ...p, powerTo: e.target.value }))}
-                    placeholder="300"
-                    className="w-full bg-stone-100 rounded-xl px-3 py-2 text-xs outline-none"
-                  />
-                </div>
               </div>
             )}
           </div>
@@ -303,66 +279,6 @@ export default function FiltersScreen({
                     }`}
                   >
                     {box === 'Все коробки' ? 'Все коробки' : box.charAt(0).toUpperCase() + box.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Drivetrain options */}
-          <div className="p-4 space-y-3">
-            <button
-              onClick={() => toggleSection('drive')}
-              className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
-            >
-              <span>Привод трансмиссии</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.driveType}</span>
-            </button>
-
-            {expandedSection === 'drive' && (
-              <div className="flex flex-wrap gap-1.5 pt-2">
-                {DRIVETRAIN_TYPES.map((drive) => (
-                  <button
-                    key={drive}
-                    type="button"
-                    onClick={() => setFilters(p => ({ ...p, driveType: drive }))}
-                    className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.driveType === drive
-                        ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
-                    }`}
-                  >
-                    {drive === 'Все приводы' ? 'Все приводы' : drive.charAt(0).toUpperCase() + drive.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Steering wheel hand */}
-          <div className="p-4 space-y-3">
-            <button
-              onClick={() => toggleSection('wheel')}
-              className="w-full flex items-center justify-between text-left font-bold text-slate-800 text-sm"
-            >
-              <span>Расположение руля</span>
-              <span className="text-xs text-slate-400 font-mono">{filters.wheelPosition}</span>
-            </button>
-
-            {expandedSection === 'wheel' && (
-              <div className="flex flex-wrap gap-1.5 pt-2">
-                {WHEEL_POSITIONS.map((pos) => (
-                  <button
-                    key={pos}
-                    type="button"
-                    onClick={() => setFilters(p => ({ ...p, wheelPosition: pos }))}
-                    className={`text-xs py-2 px-3.5 rounded-lg border transition font-bold ${
-                      filters.wheelPosition === pos
-                        ? 'bg-slate-900 border-slate-905 text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
-                    }`}
-                  >
-                    {pos === 'Все варианты' ? 'Любой руль' : pos.toUpperCase() + ' руль'}
                   </button>
                 ))}
               </div>

@@ -92,23 +92,36 @@ class EncarClient:
         raise RuntimeError(f"Encar request failed: {path}") from last_exc
 
     # -- public API --------------------------------------------------------
-    def search_list(self, q: str, offset: int = 0, limit: int = 20,
-                    count: bool = True) -> dict:
+    # Encar отдаёт до 1000 записей за один запрос к list/mobile.
+    MAX_PAGE_SIZE = 1000
+
+    def search_list(self, q: str, offset: int = 0, limit: int = 100,
+                    count: bool = True, inav: str | None = None) -> dict:
         """
         Список объявлений. Возвращает ответ с ключами ``Count`` и
-        ``SearchResults``. Пагинация — через ``sr=|ModifiedDate|offset|limit``.
+        ``SearchResults`` (и ``iNav`` при запросе фасетов). Пагинация — через
+        ``sr=|ModifiedDate|offset|limit`` (объявления отсортированы по дате
+        изменения по убыванию).
         """
+        limit = min(limit, self.MAX_PAGE_SIZE)
         params = {
             "count": "true" if count else "false",
             "q": q,
             "sr": f"|ModifiedDate|{offset}|{limit}",
         }
+        if inav:
+            params["inav"] = inav
         data = self._get("/search/car/list/mobile", params=params)
         time.sleep(self.request_delay)
         return data
 
-    def iter_list(self, q: str, page_size: int = 20, max_pages: int = 2) -> Iterable[dict]:
-        """Итерируется по объявлениям списка с учётом пагинации и лимита страниц."""
+    def iter_list(self, q: str, page_size: int = 100, max_pages: int = 5) -> Iterable[dict]:
+        """
+        Лениво итерируется по объявлениям с пагинацией. Страница тянется только
+        при дальнейшем потреблении генератора — потребитель может прервать обход
+        (ранний останов), и лишние страницы не запрашиваются.
+        """
+        page_size = min(page_size, self.MAX_PAGE_SIZE)
         first = self.search_list(q, offset=0, limit=page_size)
         total = int(first.get("Count", 0) or 0)
         results = first.get("SearchResults", []) or []
@@ -125,6 +138,11 @@ class EncarClient:
                 yield item
             fetched += len(batch)
             page += 1
+
+    def get_inav(self, q: str) -> dict:
+        """Возвращает блок ``iNav`` (фасеты марок/групп/моделей) для запроса q."""
+        data = self.search_list(q, offset=0, limit=1, count=True, inav="|Metadata|Sort")
+        return data.get("iNav", {}) or {}
 
     def get_vehicle(self, vehicle_id: str | int) -> dict:
         """Полная карточка одного объявления."""

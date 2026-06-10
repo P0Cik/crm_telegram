@@ -4,7 +4,7 @@ import {
   Trash2, RefreshCcw, FileText, CheckCircle2,
   Upload, Image, X, Search, ChevronLeft, Plus, Eye
 } from 'lucide-react';
-import { Car, Order, Subscription } from '../types';
+import { Car, Order, Subscription, User } from '../types';
 import api from '../services/api';
 
 interface AdminCRMProps {
@@ -19,25 +19,122 @@ interface AdminCRMProps {
 
 // Маппинг статусов бэкенда для отображения
 const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
-  'PROCESSING': { label: 'В обработке', color: 'bg-yellow-100 text-yellow-800' },
-  'WAREHOUSE_KR': { label: 'Склад Корея', color: 'bg-blue-100 text-blue-800' },
-  'IN_TRANSIT_BORDER': { label: 'В пути на границу', color: 'bg-indigo-100 text-indigo-800' },
-  'AT_BORDER': { label: 'На границе', color: 'bg-purple-100 text-purple-800' },
-  'WAREHOUSE_RU': { label: 'Склад Россия', color: 'bg-cyan-100 text-cyan-800' },
-  'IN_TRANSIT_RU': { label: 'В пути по России', color: 'bg-teal-100 text-teal-800' },
-  'DELIVERED': { label: 'Доставлен', color: 'bg-green-100 text-green-800' },
+  'REVIEW': { label: 'На рассмотрении', color: 'bg-slate-100 text-slate-800' },
+  'APPLICATION': { label: 'Оформление заявки', color: 'bg-slate-100 text-slate-800' },
+  'AWAITING_PAYMENT': { label: 'Ожидается оплата', color: 'bg-yellow-100 text-yellow-800' },
+  'PURCHASE': { label: 'Выкуп автомобиля', color: 'bg-yellow-100 text-yellow-800' },
+  'TO_WAREHOUSE_KR': { label: 'В пути на склад (Корея)', color: 'bg-blue-100 text-blue-800' },
+  'AT_WAREHOUSE_KR': { label: 'Прибыл на склад (Корея)', color: 'bg-blue-100 text-blue-800' },
+  'DOCUMENTS': { label: 'Подготовка документов', color: 'bg-indigo-100 text-indigo-800' },
+  'SHIPPING_PREP': { label: 'Подготовка к отправке', color: 'bg-indigo-100 text-indigo-800' },
+  'TO_BORDER': { label: 'В пути на границу', color: 'bg-purple-100 text-purple-800' },
+  'CUSTOMS': { label: 'Таможенное оформление', color: 'bg-purple-100 text-purple-800' },
+  'TO_WAREHOUSE_RU': { label: 'В пути на склад (Россия)', color: 'bg-cyan-100 text-cyan-800' },
+  'TO_DESTINATION': { label: 'В пути в город назначения', color: 'bg-teal-100 text-teal-800' },
+  'DELIVERED': { label: 'Автомобиль передан клиенту', color: 'bg-green-100 text-green-800' },
   'CANCELLED': { label: 'Отменён', color: 'bg-red-100 text-red-800' },
 };
 
 const STATUS_FLOW = [
-  'PROCESSING',
-  'WAREHOUSE_KR',
-  'IN_TRANSIT_BORDER',
-  'AT_BORDER',
-  'WAREHOUSE_RU',
-  'IN_TRANSIT_RU',
-  'DELIVERED',
+  'REVIEW', 'APPLICATION', 'AWAITING_PAYMENT', 'PURCHASE',
+  'TO_WAREHOUSE_KR', 'AT_WAREHOUSE_KR', 'DOCUMENTS', 'SHIPPING_PREP',
+  'TO_BORDER', 'CUSTOMS', 'TO_WAREHOUSE_RU', 'TO_DESTINATION',
+  'DELIVERED', 'CANCELLED'
 ];
+
+function EditClientForm({ user, onBack, onSaved, onDelete, showToast }: { user: User, onBack: () => void, onSaved: () => void, onDelete: () => void, showToast: (msg: string) => void }) {
+  const [formData, setFormData] = useState({
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    phone: user.phone || '',
+    email: user.email || '',
+  });
+  const [isActive, setIsActive] = useState(user.is_active);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const result = await api.users.update(user.id, { ...formData, is_active: isActive });
+    setIsLoading(false);
+    if (result) {
+      showToast('✅ Профиль сохранен!');
+      onSaved();
+    } else {
+      showToast('❌ Ошибка сохранения');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Вы уверены, что хотите удалить этого пользователя? Это действие необратимо.')) return;
+    setIsLoading(true);
+    const result = await api.users.delete(user.id);
+    setIsLoading(false);
+    if (result) {
+      showToast('🗑 Пользователь удален');
+      onDelete();
+    } else {
+      showToast('❌ Ошибка удаления');
+    }
+  };
+
+  return (
+    <div className="space-y-5 font-sans text-sm bg-white p-4 rounded-2xl border border-slate-150">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onBack} className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <h3 className="font-bold text-slate-800">Редактирование профиля</h3>
+        </div>
+        <button type="button" onClick={handleDelete} disabled={isLoading} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition">
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Имя</label>
+            <input type="text" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Фамилия</label>
+            <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Телефон</label>
+            <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Email</label>
+            <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <div>
+            <p className="font-bold text-slate-800 text-sm">Статус профиля</p>
+            <p className="text-[10px] text-slate-500">Заблокированные пользователи не могут создавать заказы</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="sr-only peer" />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+          </label>
+        </div>
+
+        <button type="submit" disabled={isLoading}
+          className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3.5 rounded-xl uppercase font-mono text-xs tracking-wider transition shadow disabled:opacity-50 mt-4">
+          {isLoading ? 'Сохранение...' : 'Сохранить изменения'}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 export default function AdminCRM({
   cars,
@@ -48,7 +145,7 @@ export default function AdminCRM({
   onDeleteCar,
   onRefreshData,
 }: AdminCRMProps) {
-  type CrmViewType = 'orders-list' | 'order-detail' | 'create-order' | 'add-car' | 'listings' | 'advertisements';
+  type CrmViewType = 'orders-list' | 'order-detail' | 'create-order' | 'advertisements' | 'clients-list' | 'edit-client';
   const [crmView, setCrmView] = useState<CrmViewType>('orders-list');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,28 +153,20 @@ export default function AdminCRM({
   // Brands/Models from API
   const [brands, setBrands] = useState<Array<{ id: number; name: string }>>([]);
   const [models, setModels] = useState<Array<{ id: number; name: string; brand: { id: number; name: string } }>>([]);
-  const [filteredModels, setFilteredModels] = useState<Array<{ id: number; name: string }>>([]);
-
-  // New Car form
-  const [newCar, setNewCar] = useState({
-    vin: '', brand_id: 0, model_id: 0, year: 2024, fuel_type: 'PETROL',
-    engine_volume: 2.0, engine_power: 150, transmission: 'автомат',
-    steering_wheel: 'LEFT', drive_type: 'передний', color: 'черный', seller_country: 'Южная Корея',
-  });
-
-  // Advertisement form
-  const [advertisements, setAdvertisements] = useState<any[]>([]);
-  const [newAd, setNewAd] = useState({ car_vin: '', car_price: 2000000, mileage: 30000, condition: 'Отличное' });
 
   // Order detail view
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Clients view
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Create order form
   const [newOrderVin, setNewOrderVin] = useState('');
   const [newOrderPrice, setNewOrderPrice] = useState(2000000);
 
   // Photo upload for checkpoint (inside order detail)
-  const [historyStatus, setHistoryStatus] = useState<string>('PROCESSING');
+  const [historyStatus, setHistoryStatus] = useState<string>('REVIEW');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +182,6 @@ export default function AdminCRM({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Load brands and models on mount
   useEffect(() => {
     const loadBrandsModels = async () => {
       const [brandsData, modelsData] = await Promise.all([
@@ -102,74 +190,24 @@ export default function AdminCRM({
       ]);
       setBrands(brandsData);
       setModels(modelsData);
-      if (brandsData.length > 0) {
-        setNewCar(prev => ({ ...prev, brand_id: brandsData[0].id }));
-        const filtered = modelsData.filter(m => m.brand.id === brandsData[0].id);
-        setFilteredModels(filtered);
-        if (filtered.length > 0) setNewCar(prev => ({ ...prev, model_id: filtered[0].id }));
-      }
     };
     loadBrandsModels();
   }, []);
 
+  const loadUsers = async () => {
+    setIsLoading(true);
+    const data = await api.users.getAll();
+    setUsers(data);
+    setIsLoading(false);
+  };
+
   useEffect(() => {
-    if (crmView === 'advertisements') loadAdvertisements();
+    if (crmView === 'clients-list') {
+      loadUsers();
+    }
   }, [crmView]);
 
-  const loadAdvertisements = async () => {
-    setIsLoading(true);
-    setAdvertisements(await api.advertisements.getAll());
-    setIsLoading(false);
-  };
-
-  const handleBrandChange = (brandId: number) => {
-    setNewCar(prev => ({ ...prev, brand_id: brandId, model_id: 0 }));
-    const filtered = models.filter(m => m.brand.id === brandId);
-    setFilteredModels(filtered);
-    if (filtered.length > 0) setNewCar(prev => ({ ...prev, model_id: filtered[0].id }));
-  };
-
   // ===== Handlers =====
-  const handleCreateCar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCar.vin || newCar.vin.length !== 17) { showToast('❌ VIN должен содержать 17 символов'); return; }
-    setIsLoading(true);
-    try {
-      const resp = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/cars/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
-        body: JSON.stringify({
-          vin: newCar.vin, brand_id: newCar.brand_id, model_id: newCar.model_id,
-          year: newCar.year, fuel_type: newCar.fuel_type, engine_volume: newCar.engine_volume,
-          engine_power: newCar.engine_power, transmission: newCar.transmission,
-          steering_wheel: newCar.steering_wheel, drive_type: newCar.drive_type,
-          color: newCar.color, seller_country: newCar.seller_country,
-        }),
-      });
-      if (resp.ok) { showToast('🚗 Автомобиль добавлен!'); onRefreshData?.(); setCrmView('listings'); }
-      else { const err = await resp.json(); showToast(`❌ ${JSON.stringify(err)}`); }
-    } catch { showToast('❌ Ошибка при создании'); }
-    setIsLoading(false);
-  };
-
-  const handleCreateAdvertisement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const result = await api.advertisements.create(newAd);
-    if (result) {
-      showToast('📢 Объявление создано!');
-      loadAdvertisements();
-      const matchedCar = cars.find(c => c.vin === newAd.car_vin);
-      if (matchedCar) {
-        const matches = subscriptions.filter(s =>
-          s.make.toLowerCase() === matchedCar.make.toLowerCase() &&
-          s.model.toLowerCase() === matchedCar.model.toLowerCase()
-        );
-        if (matches.length > 0) showToast(`🔔 Найдено ${matches.length} совпадений с подписками!`);
-      }
-    } else showToast('❌ Ошибка');
-    setIsLoading(false);
-  };
 
   const handleChangeOrderStatus = async (orderId: string, nextStatus: string) => {
     setIsLoading(true);
@@ -220,17 +258,17 @@ export default function AdminCRM({
       status: historyStatus,
       media_file: photoFile || undefined,
     });
-    if (result) { showToast('📸 Фото-отчёт добавлен!'); clearPhoto(); }
+    if (result) {
+      showToast('📸 Фото-отчёт добавлен!');
+      clearPhoto();
+      onRefreshData?.();
+    }
     else showToast('❌ Ошибка');
     setIsLoading(false);
   };
 
   const getBackendStatus = (order: Order): string => {
-    const map: Record<string, string> = {
-      'dealing': 'PROCESSING', 'korea_warehouse': 'WAREHOUSE_KR',
-      'shipping': 'IN_TRANSIT_BORDER', 'delivered': 'DELIVERED',
-    };
-    return map[order.status] || 'PROCESSING';
+    return order.rawStatus || 'REVIEW';
   };
 
   // Catalog filtering
@@ -266,9 +304,9 @@ export default function AdminCRM({
             <span className="font-extrabold text-sm tracking-tight font-sans">Korea Auto CRM</span>
           </div>
           <div className="flex flex-wrap bg-slate-800 p-1 rounded-xl gap-1">
-            {(['orders-list', 'add-car', 'advertisements', 'listings'] as CrmViewType[]).map(v => {
+            {(['orders-list', 'advertisements', 'clients-list'] as CrmViewType[]).map(v => {
               const labels: Record<string, string> = {
-                'orders-list': 'Заказы', 'add-car': '+ Авто', 'advertisements': 'Объявления', 'listings': 'Каталог',
+                'orders-list': 'Заказы', 'advertisements': 'Объявления', 'clients-list': 'Клиенты'
               };
               return (
                 <button key={v} onClick={() => setCrmView(v)}
@@ -500,180 +538,11 @@ export default function AdminCRM({
         );
       })()}
 
-      {/* ===== ADD CAR ===== */}
-      {crmView === 'add-car' && (
-        <div className="bg-white border border-slate-150 p-4 rounded-2xl shadow-sm space-y-4">
-          <h3 className="font-bold text-sm text-slate-800 font-sans">Добавить автомобиль в базу</h3>
-          <form onSubmit={handleCreateCar} className="space-y-3.5 text-xs font-sans">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Марка</label>
-                <select value={newCar.brand_id} onChange={(e) => handleBrandChange(parseInt(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5">
-                  {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Модель</label>
-                <select value={newCar.model_id} onChange={(e) => setNewCar(p => ({ ...p, model_id: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5">
-                  {filteredModels.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">VIN (17 символов)</label>
-              <input type="text" required maxLength={17} value={newCar.vin}
-                onChange={(e) => setNewCar(p => ({ ...p, vin: e.target.value.toUpperCase() }))}
-                placeholder="WBA1A1C35JK123456"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 font-mono uppercase" />
-              <span className={`text-[10px] mt-0.5 block ${newCar.vin.length === 17 ? 'text-green-500' : 'text-slate-400'}`}>
-                {newCar.vin.length}/17
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Год</label>
-                <input type="number" required value={newCar.year}
-                  onChange={(e) => setNewCar(p => ({ ...p, year: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Двигатель (л)</label>
-                <input type="number" step="0.1" value={newCar.engine_volume}
-                  onChange={(e) => setNewCar(p => ({ ...p, engine_volume: parseFloat(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Мощность</label>
-                <input type="number" value={newCar.engine_power}
-                  onChange={(e) => setNewCar(p => ({ ...p, engine_power: parseInt(e.target.value) }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Топливо</label>
-                <select value={newCar.fuel_type} onChange={(e) => setNewCar(p => ({ ...p, fuel_type: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
-                  <option value="PETROL">Бензин</option><option value="DIESEL">Дизель</option>
-                  <option value="HYBRID">Гибрид</option><option value="ELECTRIC">Электро</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Руль</label>
-                <select value={newCar.steering_wheel} onChange={(e) => setNewCar(p => ({ ...p, steering_wheel: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
-                  <option value="LEFT">Левый</option><option value="RIGHT">Правый</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Цвет</label>
-                <input type="text" value={newCar.color} onChange={(e) => setNewCar(p => ({ ...p, color: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Привод</label>
-                <select value={newCar.drive_type} onChange={(e) => setNewCar(p => ({ ...p, drive_type: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
-                  <option value="передний">Передний</option><option value="задний">Задний</option><option value="полный">Полный</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">КПП</label>
-                <select value={newCar.transmission} onChange={(e) => setNewCar(p => ({ ...p, transmission: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5">
-                  <option value="автомат">Автомат</option><option value="механика">Механика</option><option value="робот">Робот</option>
-                </select>
-              </div>
-            </div>
-            <button type="submit" disabled={isLoading}
-              className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-4 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow disabled:opacity-50">
-              {isLoading ? 'Сохранение...' : 'Добавить в базу'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* ===== ADVERTISEMENTS ===== */}
+      {/* ===== ADVERTISEMENTS (CATALOG) ===== */}
       {crmView === 'advertisements' && (
-        <div className="space-y-5">
-          <div className="bg-white border border-slate-150 p-4 rounded-2xl shadow-sm space-y-4">
-            <h3 className="font-bold text-sm text-slate-800 font-sans flex items-center gap-1.5">
-              <FileText className="text-sky-500 w-4 h-4" /> Создать объявление
-            </h3>
-            <form onSubmit={handleCreateAdvertisement} className="space-y-3 text-xs font-sans">
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Автомобиль (VIN)</label>
-                <select required value={newAd.car_vin} onChange={(e) => setNewAd(p => ({ ...p, car_vin: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-3">
-                  <option value="">-- Выберите --</option>
-                  {cars.map(c => <option key={c.vin} value={c.vin}>{c.make} {c.model} ({c.year}) — {c.vin}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Цена (₽)</label>
-                  <input type="number" required value={newAd.car_price}
-                    onChange={(e) => setNewAd(p => ({ ...p, car_price: parseInt(e.target.value) }))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Пробег (км)</label>
-                  <input type="number" required value={newAd.mileage}
-                    onChange={(e) => setNewAd(p => ({ ...p, mileage: parseInt(e.target.value) }))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5" />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Состояние</label>
-                <select value={newAd.condition} onChange={(e) => setNewAd(p => ({ ...p, condition: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5">
-                  <option value="Отличное">Отличное</option><option value="Хорошее">Хорошее</option>
-                  <option value="Удовлетворительное">Удовлетворительное</option><option value="Требует ремонта">Требует ремонта</option>
-                </select>
-              </div>
-              <button type="submit" disabled={isLoading}
-                className="w-full bg-[#050b14] hover:bg-[#111e2f] text-white font-bold py-3.5 rounded-xl uppercase font-mono text-[10px] tracking-wider transition shadow disabled:opacity-50">
-                {isLoading ? 'Создание...' : 'Создать объявление'}
-              </button>
-            </form>
-          </div>
-          <div className="space-y-3">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Объявления ({advertisements.length})</h3>
-            {advertisements.length === 0 ? (
-              <div className="bg-slate-50 border border-dashed text-center py-8 rounded-xl text-slate-500 text-xs">Нет объявлений</div>
-            ) : (
-              <div className="space-y-2">
-                {advertisements.map((ad: any) => (
-                  <div key={ad.id} className="bg-white border border-slate-150 p-3 rounded-xl flex items-center justify-between shadow-sm">
-                    <div>
-                      <span className="font-bold text-slate-800 text-xs">
-                        {ad.car?.brand?.name || '?'} {ad.car?.model?.name || '?'} ({ad.car?.year || '?'})
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono block">
-                        VIN: {ad.car?.vin || ad.car_vin} • {ad.mileage?.toLocaleString()} км
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-sm text-slate-900 font-mono">{parseFloat(ad.car_price)?.toLocaleString()} ₽</span>
-                      <span className="text-[10px] text-slate-400 block">{ad.condition}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ===== CATALOG WITH SEARCH ===== */}
-      {crmView === 'listings' && (
         <div className="space-y-4 font-sans text-xs">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Каталог ({filteredCars.length}/{cars.length})</h3>
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Объявления ({filteredCars.length}/{cars.length})</h3>
             {onRefreshData && (
               <button onClick={onRefreshData} className="text-slate-400 hover:text-sky-500 transition p-1">
                 <RefreshCcw className="w-4 h-4" />
@@ -763,21 +632,78 @@ export default function AdminCRM({
                     <div>
                       <span className="font-bold text-slate-800">{c.make} {c.model}</span>
                       <span className="text-[10px] text-slate-400 font-mono block">
-                        {c.year} • {c.engineVolume}л • {c.power}л.с. • {c.color}
+                        {c.year} • {c.engineVolume}л • {c.color}
                       </span>
-                      <span className="text-[10px] text-slate-300 font-mono">VIN: {c.vin}</span>
+                      <span className="text-[10px] text-slate-300 font-mono block mt-0.5">
+                        VIN: {c.vin} • {(c as any).mileage?.toLocaleString() || 0} км
+                      </span>
                     </div>
                   </div>
-                  <button type="button"
-                    onClick={() => { onDeleteCar(c.id); showToast(`🗑️ ${c.make} ${c.model} удалён`); }}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition" title="Удалить">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="text-right flex-shrink-0 flex items-center gap-4">
+                    <div className="text-right">
+                      <span className="font-bold text-sm text-slate-900 font-mono">{((c as any).priceRub || 0).toLocaleString()} ₽</span>
+                      <span className="text-[10px] text-slate-400 block font-mono">{((c as any).priceWon || 0).toLocaleString()} KRW</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+      )}
+
+      {/* ===== CLIENTS LIST ===== */}
+      {crmView === 'clients-list' && (
+        <div className="space-y-4 font-sans text-xs">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Клиенты ({users.length})</h3>
+            <button onClick={loadUsers} className="text-slate-400 hover:text-sky-500 transition p-1">
+              <RefreshCcw className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {users.map(user => (
+              <div key={user.id} className="bg-white border border-slate-150 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between shadow-sm gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800 text-sm">{user.first_name || 'Без имени'} {user.last_name || ''}</span>
+                    {!user.is_active && (
+                      <span className="bg-red-50 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase font-mono">Заблокирован</span>
+                    )}
+                    {user.role === 'manager' && (
+                      <span className="bg-purple-50 text-purple-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase font-mono">Менеджер</span>
+                    )}
+                  </div>
+                  <div className="text-slate-500 mt-1">
+                    <p>Телефон: <span className="font-mono">{user.phone || 'Не указан'}</span></p>
+                    {user.email && <p>Email: {user.email}</p>}
+                    <p className="text-[10px] text-slate-400 mt-0.5">@{user.username || user.telegram_id}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => { setSelectedUserId(user.id); setCrmView('edit-client'); }}
+                    className="bg-sky-50 text-sky-600 hover:bg-sky-100 font-bold py-1.5 px-3 rounded-lg transition"
+                  >
+                    Изменить
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT CLIENT ===== */}
+      {crmView === 'edit-client' && selectedUserId && (
+        <EditClientForm 
+          user={users.find(u => u.id === selectedUserId)!} 
+          showToast={showToast}
+          onBack={() => setCrmView('clients-list')}
+          onSaved={() => { loadUsers(); setCrmView('clients-list'); }}
+          onDelete={() => { loadUsers(); setCrmView('clients-list'); }}
+        />
       )}
     </div>
   );

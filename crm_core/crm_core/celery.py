@@ -19,6 +19,10 @@ app.conf.beat_schedule = {
         'task': 'cars.tasks.sync_all_profiles',
         'schedule': crontab(minute='*/30'),  # каждые 30 минут
     },
+    'sync-catalog-daily': {
+        'task': 'cars.tasks.sync_catalog',
+        'schedule': crontab(minute=30, hour=8),  # каждый день в 8:30
+    },
     'update-exchange-rates-daily': {
         'task': 'cars.tasks.update_exchange_rates',
         'schedule': crontab(minute=0, hour=9),  # каждый день в 9:00

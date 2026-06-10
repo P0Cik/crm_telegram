@@ -4,35 +4,74 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 
 
-class Brand(models.Model):
-    """Марка автомобиля."""
-    name = models.CharField(max_length=255, verbose_name='Название', unique=True)
+# --- Справочник марок / групп / моделей --------------------------------------
+# Иерархия повторяет faceted-навигацию Encar (inav):
+#   Manufacturer -> ModelGroup -> Model
+# Каждый уровень хранит исходное (корейское) значение источника и переводы.
+# Основной язык отображения для каталога — английский (EN), русский — опционален.
+
+class TranslatableNameMixin(models.Model):
+    """Общие поля перевода названия справочника.
+
+    name_ko — исходное значение источника (Encar Value, может быть латиницей).
+    name_en — английское название (основное для отображения каталога).
+    name_ru — русское (опциональное переопределение).
+    """
+    source = models.CharField('Источник', max_length=32, default='encar', db_index=True)
+    code = models.CharField('Код источника', max_length=32, blank=True, default='')
+    name_ko = models.CharField('Название (источник)', max_length=255)
     name_en = models.CharField('Название (EN)', max_length=255, blank=True, default='')
     name_ru = models.CharField('Название (RU)', max_length=255, blank=True, default='')
 
     class Meta:
-        verbose_name = 'Марка'
-        verbose_name_plural = 'Марки'
-        ordering = ['name']
+        abstract = True
+
+    def display_name(self, lang='en'):
+        """Каталог отображается на английском; RU как переопределение."""
+        if lang == 'ru':
+            return self.name_ru or self.name_en or self.name_ko
+        return self.name_en or self.name_ko
 
     def __str__(self):
-        return self.name
+        return self.display_name()
 
 
-class Model(models.Model):
-    """Модель автомобиля (полное название Encar, напр. "X5 (G05)")."""
-    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, verbose_name='Марка', related_name='models')
-    name = models.CharField(max_length=255, verbose_name='Название')
-    model_group = models.CharField('Группа модели', max_length=255, blank=True, default='')
+class Brand(TranslatableNameMixin):
+    """Марка автомобиля (제조사 / Manufacturer)."""
+
+    class Meta:
+        verbose_name = 'Марка'
+        verbose_name_plural = 'Марки'
+        ordering = ['name_en', 'name_ko']
+        unique_together = (('source', 'name_ko'),)
+
+
+class ModelGroup(TranslatableNameMixin):
+    """Группа моделей (예: X5, 5시리즈 / ModelGroup)."""
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE,
+                              related_name='model_groups', verbose_name='Марка')
+
+    class Meta:
+        verbose_name = 'Группа моделей'
+        verbose_name_plural = 'Группы моделей'
+        ordering = ['brand__name_en', 'name_en', 'name_ko']
+        unique_together = (('brand', 'name_ko'),)
+
+
+class Model(TranslatableNameMixin):
+    """Полная модель Encar (예: "X5 (G05)", "5시리즈 (G60)")."""
+    model_group = models.ForeignKey(ModelGroup, on_delete=models.CASCADE,
+                                    related_name='models', verbose_name='Группа моделей')
 
     class Meta:
         verbose_name = 'Модель'
         verbose_name_plural = 'Модели'
-        ordering = ['brand__name', 'name']
-        unique_together = (('brand', 'name'),)
+        ordering = ['model_group__brand__name_en', 'name_en', 'name_ko']
+        unique_together = (('model_group', 'name_ko'),)
 
-    def __str__(self):
-        return self.name
+    @property
+    def brand(self):
+        return self.model_group.brand
 
 
 class User(AbstractUser):
@@ -61,12 +100,35 @@ class User(AbstractUser):
         return f"{self.last_name} {self.first_name} {self.patronymic or ''}".strip()
 
 
+# --- Курс валют --------------------------------------------------------------
+class ExchangeRate(models.Model):
+    """
+    Курс конвертации валют (напр. KRW->RUB). Обновляется задачей
+    update_exchange_rates по данным ЦБ РФ. Цена авто хранится только в исходной
+    валюте (воны), рубли вычисляются по требованию через cars/currency.py.
+    """
+    base = models.CharField('Базовая валюта', max_length=8, default='KRW')
+    quote = models.CharField('Котируемая валюта', max_length=8, default='RUB')
+    rate = models.DecimalField('Курс (quote за 1 base)', max_digits=18, decimal_places=8)
+    updated_at = models.DateTimeField('Обновлён', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Курс валют'
+        verbose_name_plural = 'Курсы валют'
+        unique_together = (('base', 'quote'),)
+
+    def __str__(self):
+        return f"{self.base}->{self.quote}: {self.rate}"
+
+
 class Car(models.Model):
     """
     Информационный объект "Автомобиль".
 
     Универсальная модель под несколько источников. Дедупликация — по паре
     (source, external_id). Записи не удаляются, а помечаются is_active=False.
+    Цена хранится только в исходной валюте (price_krw, воны); рубли вычисляются
+    по требованию (см. cars/currency.py и CarSerializer).
     """
     class FuelType(models.TextChoices):
         PETROL = 'PETROL', 'Бензин'
@@ -76,9 +138,10 @@ class Car(models.Model):
         LPG = 'LPG', 'Газ (LPG)'
         OTHER = 'OTHER', 'Другое'
 
-    class Steering(models.TextChoices):
-        LEFT = 'LEFT', 'Левый'
-        RIGHT = 'RIGHT', 'Правый'
+    class SalesStatus(models.TextChoices):
+        ON_SALE = 'ON_SALE', 'В продаже'
+        CONTRACT = 'CONTRACT', 'Бронь / договор'
+        SOLD = 'SOLD', 'Продан'
 
     # --- Идентификация источника ---
     source = models.CharField('Источник', max_length=32, default='encar', db_index=True)
@@ -91,31 +154,36 @@ class Car(models.Model):
     # --- Идентификация автомобиля ---
     vin = models.CharField("VIN номер", max_length=17, null=True, blank=True, db_index=True)
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Марка')
+    model_group = models.ForeignKey(ModelGroup, on_delete=models.SET_NULL, null=True, blank=True,
+                                    verbose_name='Группа моделей')
     model = models.ForeignKey(Model, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Модель')
-    model_group = models.CharField('Группа модели', max_length=255, blank=True, default='')
     badge = models.CharField('Комплектация', max_length=255, blank=True, default='')
 
+    # --- Цена (только воны; рубли — по требованию) ---
+    price_krw = models.BigIntegerField('Цена (KRW, воны)', null=True, blank=True)
+    origin_price_krw = models.BigIntegerField('Цена нового (KRW, воны)', null=True, blank=True)
+
     # --- Характеристики ---
+    mileage = models.IntegerField('Пробег (км)', default=0)
     year = models.IntegerField("Год выпуска", validators=[MinValueValidator(1900)])
     year_month = models.IntegerField("Год-месяц (YYYYMM)", null=True, blank=True)
     fuel_type = models.CharField("Тип топлива", max_length=20, choices=FuelType.choices, default=FuelType.OTHER)
     fuel_type_raw = models.CharField("Тип топлива (оригинал)", max_length=50, blank=True, default='')
     engine_volume = models.FloatField("Объем двигателя (см³)", null=True, blank=True)
-    engine_power = models.IntegerField("Мощность (л.с.)", null=True, blank=True)
-    transmission = models.CharField("Коробка передач", max_length=50, blank=True, null=True)
+    transmission = models.CharField("Коробка передач", max_length=50, blank=True, default='')
     transmission_raw = models.CharField("КПП (оригинал)", max_length=50, blank=True, default='')
-    steering_wheel = models.CharField("Расположение руля", max_length=10, choices=Steering.choices,
-                                      blank=True, null=True, default=Steering.LEFT)
-    drive_type = models.CharField("Привод", max_length=50, blank=True, null=True)
-    color = models.CharField("Цвет", max_length=50, blank=True, null=True)
+    color = models.CharField("Цвет", max_length=50, blank=True, default='')
     color_raw = models.CharField("Цвет (оригинал)", max_length=50, blank=True, default='')
     color_hex = models.CharField("Цвет (HEX)", max_length=16, blank=True, default='')
     body_type = models.CharField("Тип кузова", max_length=50, blank=True, default='')
     seat_count = models.IntegerField("Количество мест", null=True, blank=True)
     region = models.CharField("Регион продавца", max_length=100, blank=True, default='')
-    seller_country = models.CharField("Страна продавца", max_length=50, default='Южная Корея')
-    manufacturer_country = models.CharField("Страна производителя", max_length=50, blank=True, null=True)
-    origin_price_man = models.IntegerField("Цена нового (만원)", null=True, blank=True)
+    region_raw = models.CharField("Регион (оригинал)", max_length=100, blank=True, default='')
+
+    # --- Состояние / статус ---
+    sales_status = models.CharField("Статус продажи", max_length=20, choices=SalesStatus.choices,
+                                    default=SalesStatus.ON_SALE)
+    has_accident_record = models.BooleanField("Есть записи об авариях", null=True, blank=True)
 
     # --- Описание ---
     description_ko = models.TextField("Описание (оригинал)", blank=True, default='')
@@ -123,7 +191,7 @@ class Car(models.Model):
 
     # --- Служебные даты ---
     listed_at = models.DateTimeField("Дата размещения", null=True, blank=True)
-    modified_at = models.DateTimeField("Дата изменения в источнике", null=True, blank=True)
+    modified_at = models.DateTimeField("Дата изменения в источнике", null=True, blank=True, db_index=True)
     first_seen_at = models.DateTimeField("Впервые обнаружено", auto_now_add=True)
     last_seen_at = models.DateTimeField("В последний раз встречено", null=True, blank=True)
     detail_fetched_at = models.DateTimeField("Дозагружена деталь", null=True, blank=True)
@@ -135,9 +203,14 @@ class Car(models.Model):
         ordering = ['-first_seen_at']
 
     def __str__(self):
-        brand = self.brand.name if self.brand else '?'
-        model = self.model.name if self.model else self.model_group or '?'
+        brand = self.brand.display_name() if self.brand else '?'
+        model = self.model.display_name() if self.model else '?'
         return f"{brand} {model} ({self.year}) [{self.source}:{self.external_id}]"
+
+    def price_rub(self, rate=None):
+        """Цена в рублях по текущему курсу (вычисляется, не хранится)."""
+        from .currency import krw_to_rub
+        return krw_to_rub(self.price_krw, rate=rate)
 
 
 class CarPhoto(models.Model):
@@ -163,27 +236,6 @@ class CarPhoto(models.Model):
         return self.path
 
 
-class Advertisement(models.Model):
-    """Объявление о продаже автомобиля (листинг источника: цена, пробег, состояние)."""
-    car = models.ForeignKey(Car, on_delete=models.CASCADE, verbose_name='Автомобиль', related_name='advertisements')
-    external_id = models.CharField('ID в источнике', max_length=64, blank=True, default='', db_index=True)
-    price_krw = models.BigIntegerField('Цена (KRW, воны)', null=True, blank=True)
-    car_price = models.DecimalField('Цена (RUB)', max_digits=14, decimal_places=2, default=0)
-    mileage = models.IntegerField('Пробег', default=0)
-    condition = models.TextField('Состояние автомобиля', blank=True, default='')
-    is_active = models.BooleanField('Активно', default=True)
-    publication_date = models.DateField('Дата публикации', auto_now_add=True)
-    vin = models.CharField('VIN номер', max_length=17, blank=True, default='')
-
-    class Meta:
-        verbose_name = 'Объявление'
-        verbose_name_plural = 'Объявления'
-        ordering = ['-publication_date']
-
-    def __str__(self):
-        return f"Объявление #{self.id} - {self.car}"
-
-
 class SearchRequest(models.Model):
     """Пользовательский запрос (фильтры) для мониторинга новых предложений (подписка)."""
     class Status(models.TextChoices):
@@ -192,24 +244,23 @@ class SearchRequest(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='search_requests', verbose_name="Пользователь")
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Марка')
+    model_group = models.ForeignKey(ModelGroup, on_delete=models.SET_NULL, null=True, blank=True,
+                                    verbose_name='Группа моделей')
     model = models.ForeignKey(Model, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Модель')
     year_min = models.IntegerField("Год выпуска (от)", null=True, blank=True)
     year_max = models.IntegerField("Год выпуска (до)", null=True, blank=True)
     mileage_min = models.IntegerField("Пробег от (км)", null=True, blank=True)
     mileage_max = models.IntegerField("Пробег до (км)", null=True, blank=True)
-    min_engine_volume = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Min Объем двигателя')
-    max_engine_volume = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Max Объем двигателя')
-    min_engine_power = models.IntegerField(null=True, blank=True, verbose_name='Min Мощность двигателя')
-    max_engine_power = models.IntegerField(null=True, blank=True, verbose_name='Max Мощность двигателя')
+    min_engine_volume = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                            verbose_name='Min объём двигателя (л)')
+    max_engine_volume = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                            verbose_name='Max объём двигателя (л)')
     fuel_type = models.CharField("Тип топлива", max_length=20, blank=True, null=True)
-    condition = models.CharField("Состояние", max_length=20, blank=True, null=True)
-    price_min = models.DecimalField("Цена от", max_digits=14, decimal_places=2, null=True, blank=True)
-    price_max = models.DecimalField("Цена до", max_digits=14, decimal_places=2, null=True, blank=True)
-    transmission = models.CharField(max_length=50, null=True, blank=True, verbose_name='Запрашиваемая Коробка передач')
-    steering_wheel = models.CharField(max_length=50, null=True, blank=True, verbose_name='Запрашиваемое Расположение руля')
-    drive_type = models.CharField(max_length=50, null=True, blank=True, verbose_name='Запрашиваемый Привод')
-    colors = models.CharField(max_length=255, null=True, blank=True, verbose_name='Запрашиваемые Цвета')
-    country = models.CharField(max_length=50, null=True, blank=True, verbose_name='Запрашиваемая Страна')
+    body_type = models.CharField("Тип кузова", max_length=50, blank=True, null=True)
+    price_min = models.DecimalField("Цена от (RUB)", max_digits=14, decimal_places=2, null=True, blank=True)
+    price_max = models.DecimalField("Цена до (RUB)", max_digits=14, decimal_places=2, null=True, blank=True)
+    transmission = models.CharField(max_length=50, null=True, blank=True, verbose_name='Коробка передач')
+    colors = models.CharField(max_length=255, null=True, blank=True, verbose_name='Цвета')
     status = models.CharField("Статус запроса", max_length=20, choices=Status.choices, default=Status.TRACKED)
     last_checked_at = models.DateTimeField("Последняя проверка", null=True, blank=True,
                                            help_text="Watermark: авто, обнаруженные позже этой метки, ещё не проверялись")
@@ -222,32 +273,40 @@ class SearchRequest(models.Model):
         return f"Запрос №{self.id} от {self.user.username}"
 
 
-class SearchProfile(models.Model):
+class ImportProfile(models.Model):
     """
-    Профиль сбора данных из внешнего источника.
+    Профиль импорта данных из внешнего источника.
 
-    Менеджер задаёт марку/группу модели для мониторинга через Django Admin.
-    Заменяет внешний "парсер": сбор выполняется встроенным модулем Encar.
+    Менеджер задаёт марку/группу моделей для мониторинга через Django Admin
+    (выпадающие списки на основе справочника). Сбор выполняет встроенный модуль
+    импорта (cars/encar).
     """
     name = models.CharField('Название', max_length=255)
     source = models.CharField('Источник', max_length=32, default='encar')
-    manufacturer = models.CharField('Производитель (Encar)', max_length=255,
-                                    help_text='Например: BMW, 벤츠, 아우디')
-    model_group = models.CharField('Группа модели (Encar)', max_length=255, blank=True, default='',
-                                   help_text='Например: X5. Пусто = все модели марки')
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='import_profiles',
+                              verbose_name='Марка')
+    model_group = models.ForeignKey(ModelGroup, on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name='import_profiles', verbose_name='Группа моделей',
+                                    help_text='Пусто = все модели марки')
     extra_q = models.JSONField('Доп. параметры q', default=dict, blank=True)
-    max_pages = models.IntegerField('Макс. страниц за прогон', default=2)
+    page_size = models.IntegerField('Размер страницы', default=100,
+                                    help_text='Записей за запрос к list/mobile (до 1000)')
+    max_pages = models.IntegerField('Макс. страниц за прогон', default=5)
+    backfill_completed = models.BooleanField('Полная выгрузка завершена', default=False,
+                                             help_text='После полной первичной выгрузки включается ранний останов')
     is_active = models.BooleanField('Активен', default=True)
     last_run_at = models.DateTimeField('Последний запуск', null=True, blank=True)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Профиль сбора'
-        verbose_name_plural = 'Профили сбора'
+        verbose_name = 'Профиль импорта'
+        verbose_name_plural = 'Профили импорта'
         ordering = ['name']
 
     def __str__(self):
-        scope = self.manufacturer + (f" / {self.model_group}" if self.model_group else '')
+        scope = self.brand.display_name()
+        if self.model_group_id:
+            scope += f" / {self.model_group.display_name()}"
         return f"{self.name} ({scope})"
 
 
@@ -288,7 +347,8 @@ class Order(models.Model):
                                 related_name='managed_orders', verbose_name="Менеджер",
                                 limit_choices_to={'role': User.Role.MANAGER})
 
-    total_price = models.DecimalField("Итоговая цена заказа", max_digits=14, decimal_places=2)
+    total_price = models.DecimalField("Итоговая цена заказа (RUB)", max_digits=14, decimal_places=2,
+                                      help_text="Снапшот цены в рублях на момент оформления")
     status = models.CharField("Статус заказа", max_length=30, choices=Status.choices, default=Status.REVIEW)
 
     created_at = models.DateTimeField("Дата создания", auto_now_add=True)

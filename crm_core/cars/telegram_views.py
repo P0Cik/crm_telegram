@@ -3,7 +3,7 @@ import hmac
 import json
 import time
 from urllib.parse import parse_qs
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
@@ -83,6 +83,7 @@ def verify_telegram_data(init_data: str, bot_token: str, ttl: int = 86400) -> di
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def telegram_auth(request):
     """

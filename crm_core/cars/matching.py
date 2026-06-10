@@ -21,13 +21,13 @@ def _ci_eq(a, b) -> bool:
     return (a or "").strip().lower() == (b or "").strip().lower()
 
 
-def car_matches_request(car: Car, req: SearchRequest, ad=None) -> bool:
+def car_matches_request(car: Car, req: SearchRequest, rate=None) -> bool:
     """Проверяет соответствие автомобиля фильтрам подписки."""
-    if ad is None:
-        ad = car.advertisements.filter(is_active=True).first()
 
-    # Марка / модель
+    # Марка / группа / модель
     if req.brand_id and car.brand_id != req.brand_id:
+        return False
+    if req.model_group_id and car.model_group_id != req.model_group_id:
         return False
     if req.model_id and car.model_id != req.model_id:
         return False
@@ -38,13 +38,14 @@ def car_matches_request(car: Car, req: SearchRequest, ad=None) -> bool:
     if req.year_max and (not car.year or car.year > req.year_max):
         return False
 
-    # Цена (RUB) и пробег — из активного объявления
-    price = ad.car_price if ad else None
-    mileage = ad.mileage if ad else None
-    if req.price_min is not None and (price is None or price < req.price_min):
-        return False
-    if req.price_max is not None and (price is None or price > req.price_max):
-        return False
+    # Цена: хранится в вонах, фильтр подписки — в рублях. Сравниваем в рублях.
+    mileage = car.mileage
+    if req.price_min is not None or req.price_max is not None:
+        price_rub = car.price_rub(rate=rate)
+        if req.price_min is not None and (price_rub is None or price_rub < req.price_min):
+            return False
+        if req.price_max is not None and (price_rub is None or price_rub > req.price_max):
+            return False
     if req.mileage_min is not None and (mileage is None or mileage < req.mileage_min):
         return False
     if req.mileage_max is not None and (mileage is None or mileage > req.mileage_max):
@@ -58,24 +59,16 @@ def car_matches_request(car: Car, req: SearchRequest, ad=None) -> bool:
         if car.engine_volume > float(req.max_engine_volume) * 1000:
             return False
 
-    # Мощность
-    if req.min_engine_power is not None and car.engine_power:
-        if car.engine_power < req.min_engine_power:
-            return False
-    if req.max_engine_power is not None and car.engine_power:
-        if car.engine_power > req.max_engine_power:
-            return False
-
     # Топливо (canonical-код или отображение)
     if req.fuel_type:
         if not (_ci_eq(req.fuel_type, car.fuel_type)
                 or _ci_eq(req.fuel_type, car.get_fuel_type_display())):
             return False
 
-    # Прочие текстовые фильтры (мягкое совпадение)
+    # Прочие фильтры (мягкое совпадение)
     if req.transmission and car.transmission and not _ci_eq(req.transmission, car.transmission):
         return False
-    if req.drive_type and car.drive_type and not _ci_eq(req.drive_type, car.drive_type):
+    if req.body_type and car.body_type and not _ci_eq(req.body_type, car.body_type):
         return False
     if req.colors and car.color and req.colors.strip().lower() not in (car.color or "").lower():
         return False
@@ -94,16 +87,19 @@ def match_cars_to_subscriptions(car_ids, notifier=None):
     if notifier is None:
         from bot.notifications import send_matching_car_notification as notifier
 
+    from .currency import get_krw_rub_rate
+    rate = get_krw_rub_rate()
+
     sent = 0
     requests = (
         SearchRequest.objects
         .filter(status=SearchRequest.Status.TRACKED)
-        .select_related("brand", "model", "user")
+        .select_related("brand", "model_group", "model", "user")
     )
     base_cars = (
         Car.objects.filter(id__in=list(car_ids), is_active=True)
-        .select_related("brand", "model")
-        .prefetch_related("advertisements", "photos")
+        .select_related("brand", "model_group", "model")
+        .prefetch_related("photos")
     )
 
     now = timezone.now()
@@ -112,7 +108,7 @@ def match_cars_to_subscriptions(car_ids, notifier=None):
         for car in base_cars:
             if watermark and car.first_seen_at and car.first_seen_at <= watermark:
                 continue
-            if car_matches_request(car, req):
+            if car_matches_request(car, req, rate=rate):
                 try:
                     if notifier(req.user, car, req):
                         sent += 1

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, Check, Clipboard, CheckCircle, Smartphone, User, ShieldCheck } from 'lucide-react';
 import { Car } from '../types';
 import telegram from '../telegram';
@@ -23,15 +24,8 @@ export default function CarDetailsScreen({
   const [phone, setPhone] = useState('');
   const [orderProcessed, setOrderProcessed] = useState(false);
 
-  // Интеграция с Telegram MainButton
+  // Интеграция с Telegram MainButton убрана по просьбе пользователя
   useEffect(() => {
-    if (telegram.isInTelegram()) {
-      telegram.showMainButton('Заказать доставку в РФ', () => {
-        telegram.hapticFeedback('medium');
-        setIsOrderSheetOpen(true);
-      });
-    }
-
     return () => {
       telegram.hideMainButton();
     };
@@ -59,7 +53,7 @@ export default function CarDetailsScreen({
   };
 
   return (
-    <div className="space-y-6 pb-24 relative">
+    <div className="space-y-6 pb-24">
       {/* Navigation Header */}
       <div className="flex items-center justify-between">
         <button
@@ -149,7 +143,7 @@ export default function CarDetailsScreen({
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
             <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Двигатель</span>
-            <span className="text-sm font-bold text-slate-800">{car.engineVolume.toFixed(1)} л ({car.power} л.с.)</span>
+            <span className="text-sm font-bold text-slate-800">{car.engineVolume ? `${car.engineVolume.toFixed(1)} л` : '—'}</span>
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
@@ -163,8 +157,8 @@ export default function CarDetailsScreen({
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
-            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Привод</span>
-            <span className="text-sm font-bold text-slate-800 capitalize">{car.driveType}</span>
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Тип кузова</span>
+            <span className="text-sm font-bold text-slate-800 capitalize">{car.bodyType || '—'}</span>
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
@@ -173,8 +167,8 @@ export default function CarDetailsScreen({
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
-            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Расположение руля</span>
-            <span className="text-sm font-bold text-slate-800 uppercase">{car.wheelPosition}</span>
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Статус</span>
+            <span className="text-sm font-bold text-slate-800">{car.salesStatus || '—'}</span>
           </div>
         </div>
 
@@ -218,12 +212,12 @@ export default function CarDetailsScreen({
       </div>
 
       {/* Checkout Drawer (Bottom Sheet Mockup) */}
-      {isOrderSheetOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 flex items-end justify-center">
+      {isOrderSheetOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
           {/* Sheet overlay background dismisser */}
-          <div className="absolute inset-0" onClick={() => setIsOrderSheetOpen(false)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOrderSheetOpen(false)} />
           
-          <div className="relative bg-white w-full max-w-sm rounded-t-3xl p-5 space-y-4 shadow-2xl border-t border-slate-200 animate-in slide-in-from-bottom duration-200 z-40">
+          <div className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl animate-in slide-in-from-bottom duration-200 z-[101] max-h-[90dvh] overflow-y-auto flex flex-col">
             {/* Grabber indicator */}
             <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-2" />
 
@@ -251,7 +245,7 @@ export default function CarDetailsScreen({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="ФИО получателя"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4.5 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
                 />
               </div>
 
@@ -265,7 +259,7 @@ export default function CarDetailsScreen({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+7 (999) 000-00-00"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4.5 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
                 />
               </div>
 
@@ -292,7 +286,8 @@ export default function CarDetailsScreen({
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

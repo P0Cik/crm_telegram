@@ -3,6 +3,8 @@
 
 Обычные (не celery) функции — чтобы их можно было вызывать из management-команд
 и тестов напрямую. Дедупликация автомобилей — по паре (source, external_id).
+Справочник марок/групп/моделей заполняется автоматически и обогащается
+английскими названиями из детальных карточек.
 """
 from __future__ import annotations
 
@@ -11,8 +13,8 @@ import logging
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from ..models import Advertisement, Brand, Car, CarPhoto, Model
-from . import mapper, normalization as norm
+from ..models import Brand, Car, CarPhoto, Model, ModelGroup
+from . import normalization as norm
 
 logger = logging.getLogger(__name__)
 
@@ -30,22 +32,60 @@ def _aware(dt_str):
     return dt
 
 
-def get_or_create_brand_model(brand_name: str, model_name: str, model_group: str):
-    brand = None
-    model = None
-    if brand_name:
-        ru, en = norm.normalize_brand(brand_name)
-        brand, _ = Brand.objects.get_or_create(
-            name=brand_name, defaults={"name_en": en, "name_ru": ru}
+def _fill_if_empty(obj, **fields) -> list[str]:
+    """Заполняет пустые поля объекта; возвращает изменённые имена полей."""
+    changed = []
+    for name, value in fields.items():
+        if value and not getattr(obj, name, None):
+            setattr(obj, name, value)
+            changed.append(name)
+    return changed
+
+
+def get_or_create_catalog(brand_ko, group_ko='', model_ko='', *, source=SOURCE,
+                          brand_en='', brand_code='',
+                          group_en='', group_code='',
+                          model_en='', model_code=''):
+    """
+    Создаёт/находит цепочку Brand -> ModelGroup -> Model по корейским названиям.
+
+    EN-названия и коды (когда известны, обычно из детальной карточки)
+    заполняются оппортунистически, если ещё пусты. Возвращает (brand, group, model);
+    отсутствующие уровни — None.
+    """
+    brand = group = model = None
+    if not brand_ko:
+        return brand, group, model
+
+    if not brand_en:
+        _ru, brand_en = norm.normalize_brand(brand_ko)
+    brand, _ = Brand.objects.get_or_create(
+        source=source, name_ko=brand_ko,
+        defaults={"name_en": brand_en, "code": brand_code},
+    )
+    changed = _fill_if_empty(brand, name_en=brand_en, code=brand_code)
+    if changed:
+        brand.save(update_fields=changed)
+
+    if group_ko:
+        group, _ = ModelGroup.objects.get_or_create(
+            brand=brand, name_ko=group_ko,
+            defaults={"name_en": group_en or group_ko, "code": group_code, "source": source},
         )
-    if model_name and brand:
+        changed = _fill_if_empty(group, name_en=group_en, code=group_code)
+        if changed:
+            group.save(update_fields=changed)
+
+    if model_ko and group:
         model, _ = Model.objects.get_or_create(
-            brand=brand, name=model_name, defaults={"model_group": model_group}
+            model_group=group, name_ko=model_ko,
+            defaults={"name_en": model_en or model_ko, "code": model_code, "source": source},
         )
-        if model_group and model.model_group != model_group:
-            model.model_group = model_group
-            model.save(update_fields=["model_group"])
-    return brand, model
+        changed = _fill_if_empty(model, name_en=model_en, code=model_code)
+        if changed:
+            model.save(update_fields=changed)
+
+    return brand, group, model
 
 
 def _sync_photos(car: Car, photos: list[dict], replace: bool = False):
@@ -59,16 +99,19 @@ def _sync_photos(car: Car, photos: list[dict], replace: bool = False):
 
 
 def upsert_from_list(parsed: dict, source: str = SOURCE):
-    """Создаёт/обновляет Car + Advertisement по данным из списка."""
-    brand, model = get_or_create_brand_model(
-        parsed["brand_name"], parsed["model_name"], parsed["model_group"]
+    """Создаёт/обновляет Car по данным из списка объявлений."""
+    brand, group, model = get_or_create_catalog(
+        parsed["brand_name"], parsed["model_group"], parsed["model_name"], source=source
     )
 
     car_defaults = {
         "brand": brand,
+        "model_group": group,
         "model": model,
-        "model_group": parsed["model_group"],
         "badge": parsed["badge"],
+        "price_krw": parsed["price_won"],
+        "mileage": parsed["mileage"],
+        "sales_status": parsed["sales_status"],
         "year": parsed["year"],
         "year_month": parsed["year_month"],
         "fuel_type": parsed["fuel_type"],
@@ -79,6 +122,7 @@ def upsert_from_list(parsed: dict, source: str = SOURCE):
         "color_raw": parsed["color_raw"],
         "color_hex": parsed["color_hex"],
         "region": parsed["region"],
+        "region_raw": parsed["region_raw"],
         "source_url": parsed["source_url"],
         "source_country": "KR",
         "is_active": True,
@@ -98,18 +142,6 @@ def upsert_from_list(parsed: dict, source: str = SOURCE):
     if parsed["photos"] and not car.photos.exists():
         _sync_photos(car, parsed["photos"])
 
-    Advertisement.objects.update_or_create(
-        car=car,
-        defaults={
-            "external_id": parsed["external_id"],
-            "price_krw": parsed["price_won"],
-            "car_price": parsed["price_rub"] or 0,
-            "mileage": parsed["mileage"],
-            "condition": parsed.get("sales_status", "") or "",
-            "is_active": True,
-            "vin": car.vin or "",
-        },
-    )
     return car, created
 
 
@@ -118,9 +150,9 @@ def apply_detail(car: Car, detail: dict):
     fields = {}
     if detail.get("vin"):
         fields["vin"] = detail["vin"]
-    for key in ("badge", "model_group", "fuel_type", "fuel_type_raw",
+    for key in ("badge", "fuel_type", "fuel_type_raw",
                 "transmission", "transmission_raw", "color", "color_raw",
-                "body_type", "description_ko"):
+                "body_type", "description_ko", "sales_status"):
         val = detail.get(key)
         if val:
             fields[key] = val
@@ -132,8 +164,10 @@ def apply_detail(car: Car, detail: dict):
         fields["engine_volume"] = detail["engine_volume"]
     if detail.get("seat_count") is not None:
         fields["seat_count"] = detail["seat_count"]
-    if detail.get("origin_price_man") is not None:
-        fields["origin_price_man"] = detail["origin_price_man"]
+    if detail.get("origin_price_won") is not None:
+        fields["origin_price_krw"] = detail["origin_price_won"]
+    if detail.get("has_accident_record") is not None:
+        fields["has_accident_record"] = detail["has_accident_record"]
     listed = _aware(detail.get("listed_at"))
     if listed:
         fields["listed_at"] = listed
@@ -141,13 +175,23 @@ def apply_detail(car: Car, detail: dict):
     if modified:
         fields["modified_at"] = modified
 
-    # бренд/модель при необходимости
-    if detail.get("brand_name") and detail.get("model_name"):
-        brand, model = get_or_create_brand_model(
-            detail["brand_name"], detail["model_name"], detail.get("model_group", "")
+    if detail.get("price_won") is not None:
+        fields["price_krw"] = detail["price_won"]
+    if detail.get("mileage") is not None:
+        fields["mileage"] = detail["mileage"]
+
+    # каталог: обновляем/создаём с английскими названиями из детали
+    if detail.get("brand_name"):
+        brand, group, model = get_or_create_catalog(
+            detail["brand_name"], detail.get("model_group", ""), detail.get("model_name", ""),
+            brand_en=detail.get("brand_name_en", ""), brand_code=detail.get("brand_code", ""),
+            group_en=detail.get("model_group_en", ""), group_code=detail.get("model_group_code", ""),
+            model_en=detail.get("model_name_en", ""), model_code=detail.get("model_code", ""),
         )
         if brand:
             fields["brand"] = brand
+        if group:
+            fields["model_group"] = group
         if model:
             fields["model"] = model
 
@@ -168,38 +212,19 @@ def apply_detail(car: Car, detail: dict):
     if detail.get("photos"):
         _sync_photos(car, detail["photos"], replace=True)
 
-    # цена/пробег из детали -> объявление (если в списке его ещё не было)
-    if detail.get("price_won") is not None or detail.get("mileage") is not None:
-        ad_defaults = {
-            "external_id": car.external_id,
-            "is_active": True,
-            "vin": car.vin or "",
-        }
-        if detail.get("price_won") is not None:
-            ad_defaults["price_krw"] = detail["price_won"]
-            ad_defaults["car_price"] = detail.get("price_rub") or 0
-        if detail.get("mileage") is not None:
-            ad_defaults["mileage"] = detail["mileage"]
-        Advertisement.objects.update_or_create(car=car, defaults=ad_defaults)
-
     return car
 
 
-def deactivate_stale(brand_name: str, model_group: str, seen_external_ids, source: str = SOURCE) -> int:
+def deactivate_stale(brand=None, model_group=None, seen_external_ids=(), source: str = SOURCE) -> int:
     """
     Помечает is_active=False автомобили в рамках профиля (марка + группа модели),
-    которые не встретились в текущем прогоне. Записи не удаляются.
+    которые не встретились в текущем (полном) прогоне. Записи не удаляются.
+    Принимает объекты Brand/ModelGroup (или None).
     """
     qs = Car.objects.filter(source=source, is_active=True)
-    if brand_name:
-        qs = qs.filter(brand__name=brand_name)
-    if model_group:
+    if brand is not None:
+        qs = qs.filter(brand=brand)
+    if model_group is not None:
         qs = qs.filter(model_group=model_group)
     qs = qs.exclude(external_id__in=list(seen_external_ids))
-    count = 0
-    for car in qs:
-        car.is_active = False
-        car.save(update_fields=["is_active"])
-        car.advertisements.update(is_active=False)
-        count += 1
-    return count
+    return qs.update(is_active=False)

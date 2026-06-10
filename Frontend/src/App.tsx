@@ -57,9 +57,11 @@ export default function App() {
   const [filters, setFilters] = useState<SearchFilters>({ ...DEFAULT_FILTERS });
   const [selectedBrand, setSelectedBrand] = useState('BMW');
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
+  const [previousView, setPreviousView] = useState<AppView>('home');
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<Checkpoint | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string | null>(null);
+  const [filterOptions, setFilterOptions] = useState<any>(null);
 
 
   // Load and populate data from API on initialization
@@ -73,7 +75,8 @@ export default function App() {
       }
 
       // Проверка, что приложение запущено в Telegram
-      if (telegram.isInTelegram()) {
+      const isTelegram = telegram.isInTelegram();
+      if (isTelegram) {
         const user = telegram.getUser();
         setTelegramUser(user);
 
@@ -82,31 +85,26 @@ export default function App() {
         if (webApp?.colorScheme === 'dark') {
           document.documentElement.classList.add('dark');
         }
+      }
 
-        // Аутентификация через Telegram
-        const authResult = await authService.authenticate();
+      // Аутентификация
+      const authResult = await authService.authenticate();
 
-        if (authResult?.success) {
-          setIsAuthenticated(true);
+      if (authResult?.success) {
+        setIsAuthenticated(true);
+        if (!isTelegram) {
+           setTelegramUser(authResult.user);
+        }
 
-          // Автоматическое определение роли из ответа аутентификации
-          if (authResult.user.role === 'MANAGER') {
-            setActiveRole('manager');
-          } else {
-            setActiveRole('client');
-          }
+        // Автоматическое определение роли из ответа аутентификации
+        if (authResult.user.role === 'MANAGER') {
+          setActiveRole('manager');
         } else {
-          console.error('Authentication failed');
-          setIsAuthenticated(false);
+          setActiveRole('client');
         }
       } else {
+        console.error('Authentication failed');
         setIsAuthenticated(false);
-
-        // В режиме разработки проверяем сохранённую роль
-        const savedRole = authService.getUserRole();
-        if (savedRole === 'MANAGER') {
-          setActiveRole('manager');
-        }
       }
 
       setIsAuthenticating(false);
@@ -124,15 +122,17 @@ export default function App() {
     // Загрузка данных из API
     const loadData = async () => {
       try {
-        const [carsData, ordersData, subscriptionsData] = await Promise.all([
+        const [carsData, ordersData, subscriptionsData, filtersData] = await Promise.all([
           api.cars.getAll(),
           api.orders.getAll(),
-          api.subscriptions.getAll()
+          api.subscriptions.getAll(),
+          api.cars.getFilters()
         ]);
 
         setCars(carsData);
         setOrders(ordersData);
         setSubscriptions(subscriptionsData);
+        setFilterOptions(filtersData);
       } catch (error) {
         console.error('Error loading data from API:', error);
       }
@@ -257,7 +257,7 @@ export default function App() {
     const selectedCar = cars.find(c => c.id === selectedCarId);
     if (!selectedCar) return;
 
-    const newOrder = await api.orders.create(selectedCar.id, selectedCar.priceRub);
+    const newOrder = await api.orders.create(selectedCar.id, selectedCar.priceRub, name, phone);
 
     if (newOrder) {
       const updatedOrders = [newOrder, ...orders];
@@ -292,6 +292,7 @@ export default function App() {
             onDeleteSubscription={handleDeleteSubscription}
             onViewCarDetails={(id) => {
               setSelectedCarId(id);
+              setPreviousView('home');
               setActiveView('car-details');
             }}
             onOpenSubscriptions={() => setActiveView('subscriptions-list')}
@@ -305,14 +306,19 @@ export default function App() {
       case 'makes-selector':
         return (
           <MakesSelector
+            brands={filterOptions?.brands || []}
             onBack={() => setActiveView('home')}
             onSelectBrand={(brand) => {
               if (brand) {
                 setSelectedBrand(brand);
-                setFilters(prev => ({ ...prev, make: brand, model: '' }));
+                const newFilters = { ...filters, make: brand, model: '' };
+                setFilters(newFilters);
+                api.cars.search(newFilters).then(setCars);
                 setActiveView('models-selector');
               } else {
-                setFilters(prev => ({ ...prev, make: '', model: '' }));
+                const newFilters = { ...filters, make: '', model: '' };
+                setFilters(newFilters);
+                api.cars.search(newFilters).then(setCars);
                 setActiveView('listings');
               }
             }}
@@ -320,20 +326,28 @@ export default function App() {
           />
         );
 
-      case 'models-selector':
+      case 'models-selector': {
+        const selectedBrandObj = filterOptions?.brands?.find((b: any) => b.name === selectedBrand);
+        const modelsForBrand = selectedBrandObj ? filterOptions?.models?.filter((m: any) => m.brand_id === selectedBrandObj.id) : [];
         return (
           <ModelsSelector
             brand={selectedBrand}
+            models={modelsForBrand || []}
             onBack={() => setActiveView('makes-selector')}
             onSelectModel={(model) => {
               if (model) {
-                setFilters(prev => ({ ...prev, model }));
+                const newFilters = { ...filters, model };
+                setFilters(newFilters);
+                api.cars.search(newFilters).then(setCars);
+              } else {
+                api.cars.search(filters).then(setCars);
               }
               setActiveView('listings');
             }}
             brandListingsCount={cars.filter(c => c.make === selectedBrand).length}
           />
         );
+      }
 
       case 'filters':
         return (
@@ -343,6 +357,7 @@ export default function App() {
             catalog={cars}
             onApply={(updatedFilters) => {
               setFilters(updatedFilters);
+              api.cars.search(updatedFilters).then(setCars);
               setActiveView('listings');
             }}
           />
@@ -355,11 +370,13 @@ export default function App() {
             filters={filters}
             onBack={() => {
               setFilters({ ...DEFAULT_FILTERS });
+              api.cars.search(DEFAULT_FILTERS).then(setCars);
               setActiveView('home');
             }}
             onOpenFilters={() => setActiveView('filters')}
             onSelectCar={(id) => {
               setSelectedCarId(id);
+              setPreviousView('listings');
               setActiveView('car-details');
             }}
             onAddSubscription={handleAddSubscription}
@@ -372,7 +389,7 @@ export default function App() {
         return (
           <CarDetailsScreen
             car={targetCar}
-            onBack={() => setActiveView('listings')}
+            onBack={() => setActiveView(previousView)}
             onPlaceOrder={handlePlaceOrder}
           />
         );
@@ -421,6 +438,11 @@ export default function App() {
             onBack={() => setActiveView('home')}
             onAddSub={handleCreateFullSubscription}
             onDeleteSub={handleDeleteSubscription}
+            filterOptions={filterOptions}
+            onEditSub={(id) => {
+              setSelectedSubscriptionId(id);
+              setActiveView('edit-subscription');
+            }}
           />
         );
 

@@ -1,21 +1,31 @@
 from django.contrib import admin, messages
 from .models import (
-    Brand, Model, User, Car, CarPhoto, Advertisement,
-    SearchRequest, SearchProfile, Order, OrderStatusHistory,
+    Brand, ModelGroup, Model, User, Car, CarPhoto,
+    SearchRequest, ImportProfile, Order, OrderStatusHistory, ExchangeRate,
 )
 
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'name_ru', 'name_en']
-    search_fields = ['name', 'name_ru', 'name_en']
+    list_display = ['id', 'name_en', 'name_ru', 'name_ko', 'code', 'source']
+    search_fields = ['name_en', 'name_ru', 'name_ko']
+    list_filter = ['source']
+
+
+@admin.register(ModelGroup)
+class ModelGroupAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name_en', 'name_ko', 'brand', 'code']
+    list_filter = ['brand']
+    search_fields = ['name_en', 'name_ko', 'brand__name_en']
+    autocomplete_fields = ['brand']
 
 
 @admin.register(Model)
 class ModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'model_group', 'brand']
-    list_filter = ['brand']
-    search_fields = ['name', 'brand__name']
+    list_display = ['id', 'name_en', 'name_ko', 'model_group', 'code']
+    list_filter = ['model_group__brand']
+    search_fields = ['name_en', 'name_ko', 'model_group__name_en']
+    autocomplete_fields = ['model_group']
 
 
 @admin.register(User)
@@ -26,64 +36,61 @@ class UserAdmin(admin.ModelAdmin):
     list_editable = ['role']
 
 
+@admin.register(ExchangeRate)
+class ExchangeRateAdmin(admin.ModelAdmin):
+    list_display = ['id', 'base', 'quote', 'rate', 'updated_at']
+    readonly_fields = ['updated_at']
+
+
 class CarPhotoInline(admin.TabularInline):
     model = CarPhoto
     extra = 0
     fields = ['path', 'category', 'ordering']
 
 
-class AdvertisementInline(admin.TabularInline):
-    model = Advertisement
-    extra = 0
-    fields = ['price_krw', 'car_price', 'mileage', 'is_active', 'publication_date']
-    readonly_fields = ['publication_date']
-
-
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
-    list_display = ['id', 'brand', 'model', 'year', 'fuel_type', 'color',
-                    'region', 'source', 'external_id', 'is_active']
-    list_filter = ['source', 'is_active', 'brand', 'fuel_type', 'year']
-    search_fields = ['vin', 'external_id', 'brand__name', 'model__name', 'badge']
+    list_display = ['id', 'brand', 'model', 'year', 'price_krw', 'mileage', 'fuel_type', 'color',
+                    'region', 'sales_status', 'source', 'external_id', 'is_active']
+    list_filter = ['source', 'is_active', 'sales_status', 'brand', 'fuel_type', 'year']
+    search_fields = ['vin', 'external_id', 'brand__name_en', 'model__name_en', 'badge']
     list_select_related = ['brand', 'model']
-    inlines = [AdvertisementInline, CarPhotoInline]
+    autocomplete_fields = ['brand', 'model_group', 'model']
+    inlines = [CarPhotoInline]
     readonly_fields = ['first_seen_at', 'last_seen_at', 'detail_fetched_at', 'source_metadata']
-
-
-@admin.register(Advertisement)
-class AdvertisementAdmin(admin.ModelAdmin):
-    list_display = ['id', 'car', 'price_krw', 'car_price', 'mileage', 'is_active', 'publication_date']
-    list_filter = ['is_active', 'publication_date']
-    search_fields = ['car__vin', 'car__external_id']
 
 
 @admin.register(SearchRequest)
 class SearchRequestAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'brand', 'model', 'status', 'year_min', 'year_max',
+    list_display = ['id', 'user', 'brand', 'model_group', 'model', 'status', 'year_min', 'year_max',
                     'price_min', 'price_max', 'last_checked_at']
     list_filter = ['status', 'brand']
-    search_fields = ['user__username', 'brand__name', 'model__name']
+    search_fields = ['user__username', 'brand__name_en', 'model__name_en']
+    autocomplete_fields = ['brand', 'model_group', 'model']
 
 
-@admin.register(SearchProfile)
-class SearchProfileAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'manufacturer', 'model_group', 'is_active', 'max_pages', 'last_run_at']
-    list_filter = ['is_active', 'source']
-    search_fields = ['name', 'manufacturer', 'model_group']
-    actions = ['run_sync']
+@admin.register(ImportProfile)
+class ImportProfileAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'brand', 'model_group', 'is_active', 'page_size', 'max_pages',
+                    'backfill_completed', 'last_run_at']
+    list_filter = ['is_active', 'source', 'brand']
+    search_fields = ['name', 'brand__name_en', 'model_group__name_en']
+    autocomplete_fields = ['brand', 'model_group']
+    readonly_fields = ['last_run_at', 'created_at', 'backfill_completed']
+    actions = ['run_import']
 
-    @admin.action(description='Запустить синхронизацию выбранных профилей')
-    def run_sync(self, request, queryset):
+    @admin.action(description='Запустить импорт выбранных профилей')
+    def run_import(self, request, queryset):
         from .tasks import sync_encar_profile
         count = 0
         for profile in queryset:
             try:
-                # Пытаемся через Celery; если брокер недоступен — синхронно
+                # Через Celery; если брокер недоступен — синхронно
                 sync_encar_profile.delay(profile.id)
             except Exception:
                 sync_encar_profile(profile.id)
             count += 1
-        self.message_user(request, f'Запущена синхронизация {count} профиля(ей)', messages.SUCCESS)
+        self.message_user(request, f'Запущен импорт {count} профиля(ей)', messages.SUCCESS)
 
 
 class OrderStatusHistoryInline(admin.TabularInline):
@@ -99,6 +106,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ['status', 'created_at']
     search_fields = ['user__username', 'car__vin', 'car__external_id']
     list_editable = ['status', 'manager']
+    autocomplete_fields = ['car', 'user', 'manager']
     inlines = [OrderStatusHistoryInline]
 
     def save_formset(self, request, form, formset, change):

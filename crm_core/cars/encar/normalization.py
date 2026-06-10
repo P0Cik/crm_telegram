@@ -1,12 +1,26 @@
 """
-Нормализация корейских значений Encar.
+Нормализация корейских значений Encar (перечисления: топливо, КПП, кузов, цвет,
+регион). Основной язык этих значений — русский.
 
 Основной способ — словари соответствий (стабильнее, быстрее и точнее, чем
 машинный перевод). Каждый словарь отображает корейское значение в кортеж
 переводов (RU, EN). Для топлива/КПП дополнительно хранится canonical-код,
 используемый для фильтрации в БД.
+
+Если значение неизвестно — оно НЕ теряется: исходное значение сохраняется в
+поле *_raw автомобиля и логируется (WARNING) для последующего добавления в
+словарь. Так система остаётся полной и не требует ручного вмешательства, чтобы
+не сломаться при появлении новых значений.
 """
 from __future__ import annotations
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _record_unmapped(kind: str, value: str) -> None:
+    logger.warning("Encar: неизвестное значение [%s]=%r — сохранено как есть (raw)", kind, value)
 
 # --- Топливо (연료 / FuelType) ------------------------------------------------
 # value -> (canonical_code, ru, en)
@@ -134,39 +148,64 @@ def normalize_fuel(value: str):
     """KO -> (canonical_code, ru, en). По умолчанию OTHER."""
     if not value:
         return ("OTHER", "Другое", "Other")
-    return FUEL_TYPE_MAP.get(value.strip(), ("OTHER", value, value))
+    key = value.strip()
+    if key in FUEL_TYPE_MAP:
+        return FUEL_TYPE_MAP[key]
+    _record_unmapped("fuel", key)
+    return ("OTHER", value, value)
 
 
 def normalize_transmission(value: str):
     """KO -> (canonical_code, ru, en)."""
     if not value:
         return ("", "", "")
-    return TRANSMISSION_MAP.get(value.strip(), ("OTHER", value, value))
+    key = value.strip()
+    if key in TRANSMISSION_MAP:
+        return TRANSMISSION_MAP[key]
+    _record_unmapped("transmission", key)
+    return ("OTHER", value, value)
 
 
 def normalize_color(value: str):
     """KO -> (ru, en)."""
     if not value:
         return ("", "")
-    return COLOR_MAP.get(value.strip(), (value, value))
+    key = value.strip()
+    if key in COLOR_MAP:
+        return COLOR_MAP[key]
+    _record_unmapped("color", key)
+    return (value, value)
 
 
 def normalize_body_type(value: str):
     """KO -> (ru, en)."""
     if not value:
         return ("", "")
-    return BODY_TYPE_MAP.get(value.strip(), (value, value))
+    key = value.strip()
+    if key in BODY_TYPE_MAP:
+        return BODY_TYPE_MAP[key]
+    _record_unmapped("body_type", key)
+    return (value, value)
 
 
 def normalize_region(value: str):
     """KO -> (ru, en)."""
     if not value:
         return ("", "")
-    return REGION_MAP.get(value.strip(), (value, value))
+    key = value.strip()
+    if key in REGION_MAP:
+        return REGION_MAP[key]
+    _record_unmapped("region", key)
+    return (value, value)
 
 
 def normalize_brand(value: str):
-    """KO/EN -> (ru/display, en)."""
+    """KO/EN -> (ru, en). Для каталога основной язык — EN."""
     if not value:
         return ("", "")
-    return BRAND_MAP.get(value.strip(), (value, value))
+    key = value.strip()
+    if key in BRAND_MAP:
+        _ru, en = BRAND_MAP[key]
+        return ("", en)
+    # Неизвестная марка: en = как есть (часто уже латиница), ru пусто
+    return ("", value)

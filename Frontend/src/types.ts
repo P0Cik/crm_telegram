@@ -2,6 +2,7 @@ export interface Car {
   id: string;
   make: string;
   model: string;
+  modelGroup?: string;
   year: number;
   priceWon: number;
   priceRub: number;
@@ -11,13 +12,17 @@ export interface Car {
   engineVolume: number; // in liters, e.g. 1.5
   fuelType: string; // "бензин" | "дизель" | "гибрид" | "электро"
   gearbox: string; // "робот" | "автомат" | "механика"
-  wheelPosition: string; // "левый" | "правый"
-  driveType: string; // "передний" | "задний" | "полный"
   color: string;
   mileage: number; // in km
-  power: number; // in hp
+  bodyType?: string;
+  salesStatus?: string;
   vin: string;
   isPopular?: boolean;
+  // Поля ниже отсутствуют в источнике Encar — оставлены опциональными
+  // для обратной совместимости (не заполняются API).
+  wheelPosition?: string;
+  driveType?: string;
+  power?: number;
 }
 
 export interface Checkpoint {
@@ -38,6 +43,7 @@ export interface Order {
   clientName: string;
   clientPhone: string;
   status: OrderStatus; // 'dealing' (сделка), 'korea_warehouse' (склад корея), 'shipping' (в пути), 'delivered' (ключи)
+  rawStatus?: string; // Исходный статус из БД для админки
   dateCreated: string;
   expectedDeliveryDate: string;
   checkpoints: Checkpoint[];
@@ -100,4 +106,19 @@ export type AppView =
   | 'edit-subscription'
   | 'admin-dashboard';
 
-export type UserRole = 'client' | 'manager';
+export type UserRole = 'client' | 'manager' | 'admin';
+
+export interface User {
+  id: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  patronymic?: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  role: UserRole;
+  role_display?: { value: string; display: string };
+  is_active: boolean;
+  telegram_id?: string;
+}

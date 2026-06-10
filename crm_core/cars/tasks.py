@@ -1,6 +1,6 @@
 """
-Celery-задачи: синхронизация предложений Encar, обогащение деталей,
-матчинг подписок, обновление курса валют.
+Celery-задачи: импорт и синхронизация предложений Encar, обогащение деталей,
+матчинг подписок, обновление справочника и курса валют.
 """
 import logging
 
@@ -9,13 +9,15 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+ENRICH_CHUNK = 50  # сколько id за один запрос к vehicles?vehicleIds=
+
 
 @shared_task
 def sync_all_profiles():
-    """Запускает синхронизацию для всех активных профилей сбора (celery-beat)."""
-    from .models import SearchProfile
+    """Запускает синхронизацию для всех активных профилей (celery-beat)."""
+    from .models import ImportProfile
 
-    ids = list(SearchProfile.objects.filter(is_active=True).values_list("id", flat=True))
+    ids = list(ImportProfile.objects.filter(is_active=True).values_list("id", flat=True))
     for pid in ids:
         sync_encar_profile.delay(pid)
     logger.info("Запланирована синхронизация %s профилей", len(ids))
@@ -25,44 +27,100 @@ def sync_all_profiles():
 @shared_task
 def sync_encar_profile(profile_id):
     """
-    Синхронизирует один профиль: тянет список Encar, апсертит авто/объявления,
-    деактивирует пропавшие, обогащает новые и запускает матчинг подписок.
+    Синхронизирует один профиль: тянет список Encar (страницами до 1000), апсертит
+    авто, обогащает новые/изменившиеся через групповой эндпоинт vehicles, при
+    полном прогоне деактивирует пропавшие. На инкрементальном прогоне (после
+    первичной полной выгрузки) применяет ранний останов: объявления отсортированы
+    по дате изменения, поэтому при встрече уже известного и неизменившегося
+    объявления дальнейшая пагинация прекращается.
     """
-    from .models import SearchProfile
+    from .models import Car, ImportProfile
     from .encar.client import EncarClient, build_q
     from .encar import mapper, sync
 
     try:
-        profile = SearchProfile.objects.get(id=profile_id)
-    except SearchProfile.DoesNotExist:
-        logger.error("SearchProfile #%s не найден", profile_id)
+        profile = ImportProfile.objects.select_related("brand", "model_group").get(id=profile_id)
+    except ImportProfile.DoesNotExist:
+        logger.error("ImportProfile #%s не найден", profile_id)
         return None
 
-    q = build_q(profile.manufacturer, profile.model_group or None)
+    manufacturer = profile.brand.name_ko
+    model_group = profile.model_group.name_ko if profile.model_group_id else None
+    q = build_q(manufacturer, model_group)
+
     seen_ids = set()
-    new_car_ids = []
+    to_enrich = []          # external_id новых/изменившихся
+    new_car_ids = []        # db id созданных (для матчинга)
+    early_stopped = False
+    total = None
+    offset = 0
+    page = 0
 
     with EncarClient() as client:
-        for item in client.iter_list(q, max_pages=profile.max_pages):
-            parsed = mapper.parse_list_item(item)
-            if not parsed:
-                continue
-            try:
-                car, created = sync.upsert_from_list(parsed)
-            except Exception as exc:
-                logger.error("Ошибка апсерта %s: %s", parsed.get("external_id"), exc)
-                continue
-            seen_ids.add(car.external_id)
-            if created:
-                new_car_ids.append(car.id)
+        while page < profile.max_pages:
+            data = client.search_list(q, offset=offset, limit=profile.page_size)
+            if total is None:
+                total = int(data.get("Count", 0) or 0)
+            batch = data.get("SearchResults", []) or []
+            if not batch:
+                break
 
-    deactivated = sync.deactivate_stale(profile.manufacturer, profile.model_group, seen_ids)
+            stop = False
+            for item in batch:
+                parsed = mapper.parse_list_item(item)
+                if not parsed:
+                    continue
+                ext = parsed["external_id"]
+                existing = (
+                    Car.objects.filter(source=sync.SOURCE, external_id=ext)
+                    .only("id", "price_krw", "mileage", "sales_status", "is_active")
+                    .first()
+                )
+                # Ранний останов: известное активное и неизменившееся объявление
+                if (profile.backfill_completed and existing and existing.is_active
+                        and existing.price_krw == parsed["price_won"]
+                        and existing.mileage == parsed["mileage"]
+                        and existing.sales_status == parsed["sales_status"]):
+                    seen_ids.add(ext)
+                    stop = True
+                    early_stopped = True
+                    break
+
+                try:
+                    car, created = sync.upsert_from_list(parsed)
+                except Exception as exc:
+                    logger.error("Ошибка апсерта %s: %s", ext, exc)
+                    continue
+                seen_ids.add(ext)
+                if created:
+                    new_car_ids.append(car.id)
+                    to_enrich.append(ext)
+                elif existing and (existing.price_krw != parsed["price_won"]
+                                   or existing.sales_status != parsed["sales_status"]
+                                   or car.detail_fetched_at is None):
+                    to_enrich.append(ext)
+
+            offset += len(batch)
+            page += 1
+            if stop:
+                break
+            if total is not None and offset >= total:
+                break
+
+    full_pass = (not early_stopped) and (total is not None and offset >= total)
+
+    if full_pass:
+        deactivated = sync.deactivate_stale(profile.brand, profile.model_group, seen_ids)
+        if not profile.backfill_completed:
+            profile.backfill_completed = True
+    else:
+        deactivated = 0
 
     profile.last_run_at = timezone.now()
-    profile.save(update_fields=["last_run_at"])
+    profile.save(update_fields=["last_run_at", "backfill_completed"])
 
-    for cid in new_car_ids:
-        enrich_car.delay(cid)
+    if to_enrich:
+        enrich_cars.delay(to_enrich)
     if new_car_ids:
         match_new_cars.delay(new_car_ids)
 
@@ -70,33 +128,50 @@ def sync_encar_profile(profile_id):
         "profile": profile.name,
         "seen": len(seen_ids),
         "new": len(new_car_ids),
+        "to_enrich": len(to_enrich),
         "deactivated": deactivated,
+        "full_pass": full_pass,
+        "early_stopped": early_stopped,
     }
-    logger.info("Синк профиля завершён: %s", result)
+    logger.info("Импорт профиля завершён: %s", result)
     return result
 
 
 @shared_task
-def enrich_car(car_id):
-    """Дозагружает детальную карточку и обогащает запись Car."""
+def enrich_cars(external_ids):
+    """
+    Групповое обогащение: дозагружает детальные карточки сразу по нескольким id
+    через ``/v1/readside/vehicles?vehicleIds=`` (чанками) и обновляет записи Car.
+    """
     from .models import Car
     from .encar.client import EncarClient
     from .encar import mapper, sync
 
-    try:
-        car = Car.objects.get(id=car_id)
-    except Car.DoesNotExist:
-        return None
+    if not external_ids:
+        return "no ids"
 
-    try:
-        with EncarClient() as client:
-            vehicle = client.get_vehicle(car.external_id)
-        detail = mapper.parse_detail(vehicle)
-        sync.apply_detail(car, detail)
-    except Exception as exc:
-        logger.error("Ошибка обогащения car #%s: %s", car_id, exc)
-        return None
-    return f"enriched car #{car_id}"
+    enriched = 0
+    with EncarClient() as client:
+        for i in range(0, len(external_ids), ENRICH_CHUNK):
+            chunk = external_ids[i:i + ENRICH_CHUNK]
+            try:
+                vehicles = client.get_vehicles(chunk)
+            except Exception as exc:
+                logger.error("Ошибка group-vehicles %s: %s", chunk[:3], exc)
+                continue
+            by_id = {str(v.get("vehicleId")): v for v in vehicles}
+            cars = Car.objects.filter(source=sync.SOURCE, external_id__in=chunk)
+            for car in cars:
+                vehicle = by_id.get(car.external_id)
+                if not vehicle:
+                    continue
+                try:
+                    sync.apply_detail(car, mapper.parse_detail(vehicle))
+                    enriched += 1
+                except Exception as exc:
+                    logger.error("Ошибка обогащения car %s: %s", car.external_id, exc)
+    logger.info("Обогащено %s авто", enriched)
+    return f"enriched {enriched} cars"
 
 
 @shared_task
@@ -110,13 +185,47 @@ def match_new_cars(car_ids):
 
 
 @shared_task
+def sync_catalog(manufacturers=None):
+    """
+    Обновляет справочник Brand -> ModelGroup -> Model из inav Encar.
+
+    Без аргументов обходит марки активных профилей импорта. inav раскрывает дерево
+    моделей только для запрошенной марки, поэтому запросы делаются по каждой марке.
+    """
+    from .models import ImportProfile
+    from .encar.client import EncarClient, build_q
+    from .encar import catalog
+
+    if manufacturers is None:
+        manufacturers = list(
+            ImportProfile.objects.filter(is_active=True)
+            .values_list("brand__name_ko", flat=True).distinct()
+        )
+    manufacturers = [m for m in manufacturers if m]
+
+    totals = {"brands": 0, "groups": 0, "models": 0}
+    with EncarClient() as client:
+        for man in manufacturers:
+            try:
+                inav = client.get_inav(build_q(man))
+                stats = catalog.upsert_catalog_from_inav(inav)
+            except Exception as exc:
+                logger.error("Ошибка sync_catalog для %s: %s", man, exc)
+                continue
+            for k in totals:
+                totals[k] += stats.get(k, 0)
+    logger.info("Справочник обновлён: %s", totals)
+    return totals
+
+
+@shared_task
 def update_exchange_rates():
     """
-    Обновляет курс KRW->RUB. Пытается получить курс ЦБ РФ; при неудаче
-    оставляет текущее значение из настроек.
+    Обновляет курс KRW->RUB по данным ЦБ РФ и сохраняет его в БД
+    (модель ExchangeRate). При неудаче курс не меняется.
     """
     import httpx
-    from django.conf import settings
+    from .currency import set_krw_rub_rate, get_krw_rub_rate
 
     try:
         resp = httpx.get("https://www.cbr-xml-daily.ru/daily_json.js", timeout=15.0)
@@ -124,9 +233,9 @@ def update_exchange_rates():
         data = resp.json()
         krw = data["Valute"]["KRW"]
         rate = krw["Value"] / krw["Nominal"]  # RUB за 1 KRW
-        settings.KRW_RUB_RATE = rate
+        set_krw_rub_rate(rate)
         logger.info("Курс KRW->RUB обновлён: %.5f", rate)
         return rate
     except Exception as exc:
         logger.warning("Не удалось обновить курс валют: %s", exc)
-        return getattr(settings, "KRW_RUB_RATE", None)
+        return float(get_krw_rub_rate())
