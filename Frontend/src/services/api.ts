@@ -3,7 +3,8 @@ import type {
   Car,
   Order,
   Subscription,
-  SearchFilters
+  SearchFilters,
+  User
 } from '../types';
 import authService from './auth';
 
@@ -60,6 +61,7 @@ interface ApiOrder {
   manager: any;
   total_price: string;
   status: string;
+  status_history?: any[];
   created_at: string;
   updated_at: string;
 }
@@ -117,9 +119,17 @@ const transformApiOrder = (apiOrder: ApiOrder): Order => {
     clientName: apiOrder.user?.first_name || 'Клиент',
     clientPhone: apiOrder.user?.phone || '',
     status: mapOrderStatus(apiOrder.status),
+    rawStatus: apiOrder.status,
     dateCreated: new Date(apiOrder.created_at).toLocaleDateString('ru-RU'),
     expectedDeliveryDate: '15 июня',
-    checkpoints: [],
+    checkpoints: (apiOrder.status_history || []).map((historyItem: any) => ({
+      id: historyItem.id.toString(),
+      statusText: historyItem.status_display || historyItem.status,
+      date: new Date(historyItem.created_at).toLocaleDateString('ru-RU'),
+      imageUrl: historyItem.media_file_url || '',
+      inspectorName: historyItem.updated_by?.first_name || 'Менеджер',
+      inspectionTime: new Date(historyItem.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+    })),
   };
 };
 
@@ -169,6 +179,38 @@ const mapOrderStatus = (status: string): 'dealing' | 'korea_warehouse' | 'shippi
 
 // API методы
 export const api = {
+  // Пользователи (клиенты)
+  users: {
+    getAll: async (): Promise<User[]> => {
+      try {
+        const response = await apiClient.get('/users/');
+        const results = response.data.results || response.data;
+        return Array.isArray(results) ? results.map((u: any) => ({ ...u, id: u.id.toString() })) : [];
+      } catch (error) {
+        console.error('Ошибка при загрузке пользователей:', error);
+        return [];
+      }
+    },
+    update: async (id: string, userData: Partial<User>): Promise<User | null> => {
+      try {
+        const response = await apiClient.patch(`/users/${id}/`, userData);
+        return { ...response.data, id: response.data.id.toString() };
+      } catch (error) {
+        console.error('Ошибка при обновлении пользователя:', error);
+        return null;
+      }
+    },
+    delete: async (id: string): Promise<boolean> => {
+      try {
+        await apiClient.delete(`/users/${id}/`);
+        return true;
+      } catch (error) {
+        console.error('Ошибка при удалении пользователя:', error);
+        return false;
+      }
+    },
+  },
+
   // Бренды
   brands: {
     getAll: async (): Promise<Array<{ id: number; name: string }>> => {
@@ -332,11 +374,13 @@ export const api = {
       }
     },
 
-    create: async (carId: string, totalPrice: number): Promise<Order | null> => {
+    create: async (carId: string, totalPrice: number, clientName?: string, clientPhone?: string): Promise<Order | null> => {
       try {
         const response = await apiClient.post('/orders/', {
           car_id: carId,
           total_price: totalPrice,
+          client_name: clientName,
+          client_phone: clientPhone,
         });
         return transformApiOrder(response.data);
       } catch (error) {

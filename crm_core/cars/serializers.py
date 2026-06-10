@@ -252,12 +252,6 @@ class OrderStatusHistorySerializer(serializers.ModelSerializer):
         return None
 
     def validate(self, data):
-        # Фото допускаются только на этапах перемещения
-        status_code = data.get('status')
-        if data.get('media_file') and status_code and not Order.status_allows_photos(status_code):
-            raise serializers.ValidationError(
-                {'media_file': 'Фото можно прикреплять только на этапах перемещения автомобиля'}
-            )
         return data
 
     def create(self, validated_data):
@@ -278,12 +272,14 @@ class OrderSerializer(serializers.ModelSerializer):
     )
     car_vin = serializers.CharField(write_only=True, required=False)
     total_price = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
+    client_name = serializers.CharField(write_only=True, required=False)
+    client_phone = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = Order
         fields = [
             'id', 'user', 'car', 'car_id', 'car_vin', 'manager', 'total_price',
-            'status', 'status_display', 'status_history', 'created_at', 'updated_at'
+            'status', 'status_display', 'status_history', 'client_name', 'client_phone', 'created_at', 'updated_at'
         ]
         read_only_fields = ['user', 'created_at', 'updated_at']
 
@@ -304,8 +300,31 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('car_vin', None)
-        validated_data['user'] = self.context['request'].user
-        if not validated_data.get('total_price'):
+        client_name = validated_data.pop('client_name', None)
+        client_phone = validated_data.pop('client_phone', None)
+        
+        user = self.context['request'].user
+        update_fields = []
+        if client_name:
+            parts = client_name.split(' ', 1)
+            user.first_name = parts[0][:150]
+            if len(parts) > 1:
+                user.last_name = parts[1][:150]
+            update_fields.extend(['first_name', 'last_name'])
+        if client_phone:
+            user.phone = client_phone[:50]
+            update_fields.append('phone')
+            
+        if update_fields:
+            user.save(update_fields=update_fields)
+
+        order = super().create(validated_data)
+        # Устанавливаем пользователя (по идее perform_create во ViewSet уже это делает, но на всякий случай)
+        order.user = user
+        order.save(update_fields=['user'])
+        
+        if not order.total_price:
             # Снапшот цены в рублях на момент оформления
-            validated_data['total_price'] = validated_data['car'].price_rub() or 0
-        return super().create(validated_data)
+            order.total_price = order.car.price_rub() or 0
+            order.save(update_fields=['total_price'])
+        return order

@@ -257,7 +257,7 @@ export default function App() {
     const selectedCar = cars.find(c => c.id === selectedCarId);
     if (!selectedCar) return;
 
-    const newOrder = await api.orders.create(selectedCar.id, selectedCar.priceRub);
+    const newOrder = await api.orders.create(selectedCar.id, selectedCar.priceRub, name, phone);
 
     if (newOrder) {
       const updatedOrders = [newOrder, ...orders];
@@ -438,6 +438,11 @@ export default function App() {
             onBack={() => setActiveView('home')}
             onAddSub={handleCreateFullSubscription}
             onDeleteSub={handleDeleteSubscription}
+            filterOptions={filterOptions}
+            onEditSub={(id) => {
+              setSelectedSubscriptionId(id);
+              setActiveView('edit-subscription');
+            }}
           />
         );
 

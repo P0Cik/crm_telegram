@@ -4,7 +4,7 @@ import {
   Trash2, RefreshCcw, FileText, CheckCircle2,
   Upload, Image, X, Search, ChevronLeft, Plus, Eye
 } from 'lucide-react';
-import { Car, Order, Subscription } from '../types';
+import { Car, Order, Subscription, User } from '../types';
 import api from '../services/api';
 
 interface AdminCRMProps {
@@ -19,25 +19,122 @@ interface AdminCRMProps {
 
 // Маппинг статусов бэкенда для отображения
 const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
-  'PROCESSING': { label: 'В обработке', color: 'bg-yellow-100 text-yellow-800' },
-  'WAREHOUSE_KR': { label: 'Склад Корея', color: 'bg-blue-100 text-blue-800' },
-  'IN_TRANSIT_BORDER': { label: 'В пути на границу', color: 'bg-indigo-100 text-indigo-800' },
-  'AT_BORDER': { label: 'На границе', color: 'bg-purple-100 text-purple-800' },
-  'WAREHOUSE_RU': { label: 'Склад Россия', color: 'bg-cyan-100 text-cyan-800' },
-  'IN_TRANSIT_RU': { label: 'В пути по России', color: 'bg-teal-100 text-teal-800' },
-  'DELIVERED': { label: 'Доставлен', color: 'bg-green-100 text-green-800' },
+  'REVIEW': { label: 'На рассмотрении', color: 'bg-slate-100 text-slate-800' },
+  'APPLICATION': { label: 'Оформление заявки', color: 'bg-slate-100 text-slate-800' },
+  'AWAITING_PAYMENT': { label: 'Ожидается оплата', color: 'bg-yellow-100 text-yellow-800' },
+  'PURCHASE': { label: 'Выкуп автомобиля', color: 'bg-yellow-100 text-yellow-800' },
+  'TO_WAREHOUSE_KR': { label: 'В пути на склад (Корея)', color: 'bg-blue-100 text-blue-800' },
+  'AT_WAREHOUSE_KR': { label: 'Прибыл на склад (Корея)', color: 'bg-blue-100 text-blue-800' },
+  'DOCUMENTS': { label: 'Подготовка документов', color: 'bg-indigo-100 text-indigo-800' },
+  'SHIPPING_PREP': { label: 'Подготовка к отправке', color: 'bg-indigo-100 text-indigo-800' },
+  'TO_BORDER': { label: 'В пути на границу', color: 'bg-purple-100 text-purple-800' },
+  'CUSTOMS': { label: 'Таможенное оформление', color: 'bg-purple-100 text-purple-800' },
+  'TO_WAREHOUSE_RU': { label: 'В пути на склад (Россия)', color: 'bg-cyan-100 text-cyan-800' },
+  'TO_DESTINATION': { label: 'В пути в город назначения', color: 'bg-teal-100 text-teal-800' },
+  'DELIVERED': { label: 'Автомобиль передан клиенту', color: 'bg-green-100 text-green-800' },
   'CANCELLED': { label: 'Отменён', color: 'bg-red-100 text-red-800' },
 };
 
 const STATUS_FLOW = [
-  'PROCESSING',
-  'WAREHOUSE_KR',
-  'IN_TRANSIT_BORDER',
-  'AT_BORDER',
-  'WAREHOUSE_RU',
-  'IN_TRANSIT_RU',
-  'DELIVERED',
+  'REVIEW', 'APPLICATION', 'AWAITING_PAYMENT', 'PURCHASE',
+  'TO_WAREHOUSE_KR', 'AT_WAREHOUSE_KR', 'DOCUMENTS', 'SHIPPING_PREP',
+  'TO_BORDER', 'CUSTOMS', 'TO_WAREHOUSE_RU', 'TO_DESTINATION',
+  'DELIVERED', 'CANCELLED'
 ];
+
+function EditClientForm({ user, onBack, onSaved, onDelete, showToast }: { user: User, onBack: () => void, onSaved: () => void, onDelete: () => void, showToast: (msg: string) => void }) {
+  const [formData, setFormData] = useState({
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    phone: user.phone || '',
+    email: user.email || '',
+  });
+  const [isActive, setIsActive] = useState(user.is_active);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const result = await api.users.update(user.id, { ...formData, is_active: isActive });
+    setIsLoading(false);
+    if (result) {
+      showToast('✅ Профиль сохранен!');
+      onSaved();
+    } else {
+      showToast('❌ Ошибка сохранения');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Вы уверены, что хотите удалить этого пользователя? Это действие необратимо.')) return;
+    setIsLoading(true);
+    const result = await api.users.delete(user.id);
+    setIsLoading(false);
+    if (result) {
+      showToast('🗑 Пользователь удален');
+      onDelete();
+    } else {
+      showToast('❌ Ошибка удаления');
+    }
+  };
+
+  return (
+    <div className="space-y-5 font-sans text-sm bg-white p-4 rounded-2xl border border-slate-150">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onBack} className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <h3 className="font-bold text-slate-800">Редактирование профиля</h3>
+        </div>
+        <button type="button" onClick={handleDelete} disabled={isLoading} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition">
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Имя</label>
+            <input type="text" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Фамилия</label>
+            <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Телефон</label>
+            <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 font-mono uppercase block mb-1">Email</label>
+            <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none focus:border-sky-400" />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <div>
+            <p className="font-bold text-slate-800 text-sm">Статус профиля</p>
+            <p className="text-[10px] text-slate-500">Заблокированные пользователи не могут создавать заказы</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="sr-only peer" />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+          </label>
+        </div>
+
+        <button type="submit" disabled={isLoading}
+          className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3.5 rounded-xl uppercase font-mono text-xs tracking-wider transition shadow disabled:opacity-50 mt-4">
+          {isLoading ? 'Сохранение...' : 'Сохранить изменения'}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 export default function AdminCRM({
   cars,
@@ -48,7 +145,7 @@ export default function AdminCRM({
   onDeleteCar,
   onRefreshData,
 }: AdminCRMProps) {
-  type CrmViewType = 'orders-list' | 'order-detail' | 'create-order' | 'advertisements';
+  type CrmViewType = 'orders-list' | 'order-detail' | 'create-order' | 'advertisements' | 'clients-list' | 'edit-client';
   const [crmView, setCrmView] = useState<CrmViewType>('orders-list');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,12 +157,16 @@ export default function AdminCRM({
   // Order detail view
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
+  // Clients view
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
   // Create order form
   const [newOrderVin, setNewOrderVin] = useState('');
   const [newOrderPrice, setNewOrderPrice] = useState(2000000);
 
   // Photo upload for checkpoint (inside order detail)
-  const [historyStatus, setHistoryStatus] = useState<string>('PROCESSING');
+  const [historyStatus, setHistoryStatus] = useState<string>('REVIEW');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +182,6 @@ export default function AdminCRM({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Load brands and models on mount
   useEffect(() => {
     const loadBrandsModels = async () => {
       const [brandsData, modelsData] = await Promise.all([
@@ -93,6 +193,19 @@ export default function AdminCRM({
     };
     loadBrandsModels();
   }, []);
+
+  const loadUsers = async () => {
+    setIsLoading(true);
+    const data = await api.users.getAll();
+    setUsers(data);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (crmView === 'clients-list') {
+      loadUsers();
+    }
+  }, [crmView]);
 
   // ===== Handlers =====
 
@@ -145,17 +258,17 @@ export default function AdminCRM({
       status: historyStatus,
       media_file: photoFile || undefined,
     });
-    if (result) { showToast('📸 Фото-отчёт добавлен!'); clearPhoto(); }
+    if (result) {
+      showToast('📸 Фото-отчёт добавлен!');
+      clearPhoto();
+      onRefreshData?.();
+    }
     else showToast('❌ Ошибка');
     setIsLoading(false);
   };
 
   const getBackendStatus = (order: Order): string => {
-    const map: Record<string, string> = {
-      'dealing': 'PROCESSING', 'korea_warehouse': 'WAREHOUSE_KR',
-      'shipping': 'IN_TRANSIT_BORDER', 'delivered': 'DELIVERED',
-    };
-    return map[order.status] || 'PROCESSING';
+    return order.rawStatus || 'REVIEW';
   };
 
   // Catalog filtering
@@ -191,9 +304,9 @@ export default function AdminCRM({
             <span className="font-extrabold text-sm tracking-tight font-sans">Korea Auto CRM</span>
           </div>
           <div className="flex flex-wrap bg-slate-800 p-1 rounded-xl gap-1">
-            {(['orders-list', 'advertisements'] as CrmViewType[]).map(v => {
+            {(['orders-list', 'advertisements', 'clients-list'] as CrmViewType[]).map(v => {
               const labels: Record<string, string> = {
-                'orders-list': 'Заказы', 'advertisements': 'Объявления',
+                'orders-list': 'Заказы', 'advertisements': 'Объявления', 'clients-list': 'Клиенты'
               };
               return (
                 <button key={v} onClick={() => setCrmView(v)}
@@ -537,6 +650,60 @@ export default function AdminCRM({
             </div>
           )}
         </div>
+      )}
+
+      {/* ===== CLIENTS LIST ===== */}
+      {crmView === 'clients-list' && (
+        <div className="space-y-4 font-sans text-xs">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Клиенты ({users.length})</h3>
+            <button onClick={loadUsers} className="text-slate-400 hover:text-sky-500 transition p-1">
+              <RefreshCcw className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {users.map(user => (
+              <div key={user.id} className="bg-white border border-slate-150 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between shadow-sm gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800 text-sm">{user.first_name || 'Без имени'} {user.last_name || ''}</span>
+                    {!user.is_active && (
+                      <span className="bg-red-50 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase font-mono">Заблокирован</span>
+                    )}
+                    {user.role === 'manager' && (
+                      <span className="bg-purple-50 text-purple-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase font-mono">Менеджер</span>
+                    )}
+                  </div>
+                  <div className="text-slate-500 mt-1">
+                    <p>Телефон: <span className="font-mono">{user.phone || 'Не указан'}</span></p>
+                    {user.email && <p>Email: {user.email}</p>}
+                    <p className="text-[10px] text-slate-400 mt-0.5">@{user.username || user.telegram_id}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => { setSelectedUserId(user.id); setCrmView('edit-client'); }}
+                    className="bg-sky-50 text-sky-600 hover:bg-sky-100 font-bold py-1.5 px-3 rounded-lg transition"
+                  >
+                    Изменить
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT CLIENT ===== */}
+      {crmView === 'edit-client' && selectedUserId && (
+        <EditClientForm 
+          user={users.find(u => u.id === selectedUserId)!} 
+          showToast={showToast}
+          onBack={() => setCrmView('clients-list')}
+          onSaved={() => { loadUsers(); setCrmView('clients-list'); }}
+          onDelete={() => { loadUsers(); setCrmView('clients-list'); }}
+        />
       )}
     </div>
   );

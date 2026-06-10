@@ -137,6 +137,8 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff:
             return User.objects.all()
+        if user.role == User.Role.MANAGER:
+            return User.objects.filter(is_superuser=False)
         return User.objects.filter(id=user.id)
 
     def perform_create(self, serializer):

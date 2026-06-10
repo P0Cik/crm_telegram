@@ -43,6 +43,7 @@ export interface Order {
   clientName: string;
   clientPhone: string;
   status: OrderStatus; // 'dealing' (сделка), 'korea_warehouse' (склад корея), 'shipping' (в пути), 'delivered' (ключи)
+  rawStatus?: string; // Исходный статус из БД для админки
   dateCreated: string;
   expectedDeliveryDate: string;
   checkpoints: Checkpoint[];
@@ -105,4 +106,19 @@ export type AppView =
   | 'edit-subscription'
   | 'admin-dashboard';
 
-export type UserRole = 'client' | 'manager';
+export type UserRole = 'client' | 'manager' | 'admin';
+
+export interface User {
+  id: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  patronymic?: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  role: UserRole;
+  role_display?: { value: string; display: string };
+  is_active: boolean;
+  telegram_id?: string;
+}
