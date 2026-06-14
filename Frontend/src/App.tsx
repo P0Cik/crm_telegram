@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from './services/api';
 import authService from './services/auth';
-import { Car, Order, Subscription, SearchFilters, AppView, UserRole } from './types';
+import { Car, Order, Subscription, SearchFilters, AppView, UserRole, Checkpoint, FilterOptions, CatalogOption } from './types';
 import telegram from './telegram';
 
-// Importing custom components
 import HomeScreen from './components/HomeScreen';
 import MakesSelector from './components/MakesSelector';
 import ModelsSelector from './components/ModelsSelector';
@@ -17,262 +16,166 @@ import SubscriptionsManager from './components/SubscriptionsManager';
 import EditSubscriptionScreen from './components/EditSubscriptionScreen';
 import AdminCRM from './components/AdminCRM';
 
-const DEFAULT_FILTERS: SearchFilters = {
-  make: '',
-  model: '',
-  condition: 'all',
-  yearFrom: '',
-  yearTo: '',
-  priceFrom: '',
-  priceTo: '',
-  engineVolumeFrom: '',
-  engineVolumeTo: '',
-  powerFrom: '',
-  powerTo: '',
-  fuelType: 'Все виды',
-  gearbox: 'Все коробки',
-  wheelPosition: 'Все варианты',
-  driveType: 'Все приводы',
-  color: 'Все цвета',
-  country: 'Корея'
+export const DEFAULT_FILTERS: SearchFilters = {
+  make: '', brandId: null, model: '', modelGroupId: null,
+  yearFrom: '', yearTo: '', priceFrom: '', priceTo: '',
+  mileageFrom: '', mileageTo: '', engineVolumeFrom: '', engineVolumeTo: '',
+  fuelType: '', transmission: '', bodyType: '', color: '', interiorColor: '',
+  seatCount: '', sort: '',
 };
 
 export default function App() {
-  // Core application data states
-  const [cars, setCars] = useState<Car[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [popularCars, setPopularCars] = useState<Car[]>([]);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
 
-  // Telegram user state
   const [telegramUser, setTelegramUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(true);
 
-  // Navigation and Interactive flow states
   const [activeRole, setActiveRole] = useState<UserRole>('client');
   const [activeView, setActiveView] = useState<AppView>('home');
   const [activeTab, setActiveTab] = useState<'orders' | 'subscriptions'>('orders');
 
-  // Search parameters
   const [filters, setFilters] = useState<SearchFilters>({ ...DEFAULT_FILTERS });
-  const [selectedBrand, setSelectedBrand] = useState('BMW');
-  const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<CatalogOption | null>(null);
+  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [previousView, setPreviousView] = useState<AppView>('home');
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<Checkpoint | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string | null>(null);
-  const [filterOptions, setFilterOptions] = useState<any>(null);
 
-
-  // Load and populate data from API on initialization
+  // --- Авторизация ---
   useEffect(() => {
-    const initializeApp = async () => {
-      // Инициализация Telegram WebApp
-      try {
-        telegram.init();
-      } catch (e) {
-        console.error('Telegram init error:', e);
-      }
+    const init = async () => {
+      try { telegram.init(); } catch (e) { console.error('Telegram init error:', e); }
 
-      // Проверка, что приложение запущено в Telegram
       const isTelegram = telegram.isInTelegram();
       if (isTelegram) {
-        const user = telegram.getUser();
-        setTelegramUser(user);
-
-        // Применить тему Telegram
+        setTelegramUser(telegram.getUser());
         const webApp = telegram.getWebApp();
-        if (webApp?.colorScheme === 'dark') {
-          document.documentElement.classList.add('dark');
-        }
+        if (webApp?.colorScheme === 'dark') document.documentElement.classList.add('dark');
       }
 
-      // Аутентификация
       const authResult = await authService.authenticate();
-
       if (authResult?.success) {
         setIsAuthenticated(true);
-        if (!isTelegram) {
-           setTelegramUser(authResult.user);
-        }
-
-        // Автоматическое определение роли из ответа аутентификации
-        if (authResult.user.role === 'MANAGER') {
-          setActiveRole('manager');
-        } else {
-          setActiveRole('client');
-        }
+        if (!isTelegram) setTelegramUser(authResult.user);
+        setActiveRole(authResult.user.role === 'MANAGER' ? 'manager' : 'client');
       } else {
-        console.error('Authentication failed');
         setIsAuthenticated(false);
       }
-
       setIsAuthenticating(false);
     };
-
-    initializeApp();
+    init();
   }, []);
 
-  // Загрузка данных после успешной аутентификации
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
+  // --- Загрузка данных ---
+  const reloadOrders = async () => setOrders(await api.orders.getAll());
+  const reloadSubscriptions = async () => setSubscriptions(await api.subscriptions.getAll());
 
-    // Загрузка данных из API
-    const loadData = async () => {
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const load = async () => {
       try {
-        const [carsData, ordersData, subscriptionsData, filtersData] = await Promise.all([
-          api.cars.getAll(),
+        const [ordersData, subsData, filtersData, popular] = await Promise.all([
           api.orders.getAll(),
           api.subscriptions.getAll(),
-          api.cars.getFilters()
+          api.cars.getFilters(),
+          api.cars.search({ ...DEFAULT_FILTERS, sort: '-first_seen_at' }, 1, 12),
         ]);
-
-        setCars(carsData);
         setOrders(ordersData);
-        setSubscriptions(subscriptionsData);
+        setSubscriptions(subsData);
         setFilterOptions(filtersData);
-      } catch (error) {
-        console.error('Error loading data from API:', error);
-      }
+        setPopularCars(popular.results);
+      } catch (e) { console.error('Ошибка загрузки данных:', e); }
     };
-
-    loadData();
+    load();
   }, [isAuthenticated]);
 
-  // Sync state modifications to API automatically
-  const updatePersistedData = (newCars: Car[], newOrders: Order[], newSubs: Subscription[]) => {
-    setCars(newCars);
-    setOrders(newOrders);
-    setSubscriptions(newSubs);
-  };
-
-  // State modification events handlers
-  const handleAddCar = async (newCarItem: Car) => {
-    const createdCar = await api.cars.create(newCarItem);
-    if (createdCar) {
-      const updatedCars = [createdCar, ...cars];
-      updatePersistedData(updatedCars, orders, subscriptions);
+  // --- Подписки ---
+  const resolveCatalogIds = (sub: Omit<Subscription, 'id'>): Omit<Subscription, 'id'> => {
+    // Если id не заданы, пробуем найти по названию в каталоге фильтров
+    let { brandId, modelGroupId } = sub;
+    if (!brandId && sub.make && filterOptions) {
+      const b = filterOptions.brands.find(x => x.name.toLowerCase() === sub.make.toLowerCase());
+      brandId = b?.id ?? null;
     }
-  };
-
-  const handleDeleteCar = async (carId: string) => {
-    const success = await api.cars.delete(carId);
-    if (success) {
-      const updatedCars = cars.filter(c => c.id !== carId);
-      updatePersistedData(updatedCars, orders, subscriptions);
+    if (!modelGroupId && sub.model && brandId && filterOptions) {
+      const g = filterOptions.model_groups.find(
+        x => x.name.toLowerCase() === sub.model.toLowerCase() && x.brand_id === brandId
+      );
+      modelGroupId = g?.id ?? null;
     }
+    return { ...sub, brandId, modelGroupId };
   };
 
-  const handleUpdateOrder = async (updatedOrder: Order) => {
-    const result = await api.orders.updateStatus(updatedOrder.id, updatedOrder.status);
-    if (result) {
-      const updatedOrders = orders.map(o => o.id === updatedOrder.id ? updatedOrder : o);
-      updatePersistedData(cars, updatedOrders, subscriptions);
-    }
-  };
-
-  const handleAddSubscription = async (make: string, model: string, filters?: SearchFilters) => {
-    // Avoid double subscribing
-    const exists = subscriptions.some(s => s.make.toLowerCase() === make.toLowerCase() && s.model.toLowerCase() === model.toLowerCase());
-    if (exists) return;
-
-    const newSub = await api.subscriptions.create({
-      make,
-      model,
-      yearFrom: filters?.yearFrom ? parseInt(filters.yearFrom) : undefined,
-      yearTo: filters?.yearTo ? parseInt(filters.yearTo) : undefined,
-      priceRubFrom: filters?.priceFrom ? parseFloat(filters.priceFrom) * 1000000 : undefined,
-      priceRubTo: filters?.priceTo ? parseFloat(filters.priceTo) * 1000000 : undefined,
-      mileageFrom: undefined, // Пробег обычно не задаётся при подписке
-      mileageTo: undefined,
-      engineVolumeFrom: filters?.engineVolumeFrom ? parseFloat(filters.engineVolumeFrom) : undefined,
-      engineVolumeTo: filters?.engineVolumeTo ? parseFloat(filters.engineVolumeTo) : undefined,
-      powerFrom: filters?.powerFrom ? parseInt(filters.powerFrom) : undefined,
-      powerTo: filters?.powerTo ? parseInt(filters.powerTo) : undefined,
-      fuelType: filters?.fuelType && filters.fuelType !== 'Все виды' ? filters.fuelType : undefined,
-      gearbox: filters?.gearbox && filters.gearbox !== 'Все коробки' ? filters.gearbox : undefined,
-      wheelPosition: filters?.wheelPosition && filters.wheelPosition !== 'Все варианты' ? filters.wheelPosition : undefined,
-      driveType: filters?.driveType && filters.driveType !== 'Все приводы' ? filters.driveType : undefined,
-      color: filters?.color && filters.color !== 'Все цвета' ? filters.color : undefined,
-      country: filters?.country || undefined,
-      condition: filters?.condition && filters.condition !== 'all' ? filters.condition : undefined,
+  const handleQuickSubscribe = async (f: SearchFilters) => {
+    const exists = subscriptions.some(s =>
+      (s.brandId ?? null) === (f.brandId ?? null) && (s.modelGroupId ?? null) === (f.modelGroupId ?? null)
+    );
+    if (exists) return true;
+    const sub = await api.subscriptions.create({
+      make: f.make, model: f.model, brandId: f.brandId, modelGroupId: f.modelGroupId,
+      yearFrom: f.yearFrom ? parseInt(f.yearFrom) : undefined,
+      yearTo: f.yearTo ? parseInt(f.yearTo) : undefined,
+      priceRubFrom: f.priceFrom ? parseFloat(f.priceFrom) * 1_000_000 : undefined,
+      priceRubTo: f.priceTo ? parseFloat(f.priceTo) * 1_000_000 : undefined,
+      mileageFrom: f.mileageFrom ? parseInt(f.mileageFrom) : undefined,
+      mileageTo: f.mileageTo ? parseInt(f.mileageTo) : undefined,
+      engineVolumeFrom: f.engineVolumeFrom ? parseFloat(f.engineVolumeFrom) : undefined,
+      engineVolumeTo: f.engineVolumeTo ? parseFloat(f.engineVolumeTo) : undefined,
+      fuelType: f.fuelType || undefined,
+      gearbox: f.transmission || undefined,
+      bodyType: f.bodyType || undefined,
+      color: f.color || undefined,
     });
-
-    if (newSub) {
-      const updatedSubs = [newSub, ...subscriptions];
-      updatePersistedData(cars, orders, updatedSubs);
-    }
+    if (sub) setSubscriptions(prev => [sub, ...prev]);
+    return Boolean(sub);
   };
 
   const handleCreateFullSubscription = async (subData: Omit<Subscription, 'id'>) => {
-    const newSub = await api.subscriptions.create(subData);
-    if (newSub) {
-      const updatedSubs = [newSub, ...subscriptions];
-      updatePersistedData(cars, orders, updatedSubs);
-    }
-  };
-
-  const handleDeleteSubscription = async (id: string) => {
-    const success = await api.subscriptions.delete(id);
-    if (success) {
-      const updatedSubs = subscriptions.filter(s => s.id !== id);
-      updatePersistedData(cars, orders, updatedSubs);
-    }
+    const sub = await api.subscriptions.create(resolveCatalogIds(subData));
+    if (sub) setSubscriptions(prev => [sub, ...prev]);
   };
 
   const handleUpdateSubscription = async (updated: Subscription) => {
-    const result = await api.subscriptions.update(updated.id, {
-      make: updated.make,
-      model: updated.model,
-      yearFrom: updated.yearFrom,
-      yearTo: updated.yearTo,
-      priceRubFrom: updated.priceRubFrom,
-      priceRubTo: updated.priceRubTo,
-      mileageFrom: updated.mileageFrom,
-      mileageTo: updated.mileageTo,
-      engineVolumeFrom: updated.engineVolumeFrom,
-      engineVolumeTo: updated.engineVolumeTo,
-      powerFrom: updated.powerFrom,
-      powerTo: updated.powerTo,
-      fuelType: updated.fuelType,
-      gearbox: updated.gearbox,
-      wheelPosition: updated.wheelPosition,
-      driveType: updated.driveType,
-      color: updated.color,
-      country: updated.country,
-      condition: updated.condition,
-    });
-    if (result) {
-      const updatedSubs = subscriptions.map(s => s.id === result.id ? result : s);
-      updatePersistedData(cars, orders, updatedSubs);
-    }
+    const result = await api.subscriptions.update(updated.id, resolveCatalogIds(updated));
+    if (result) setSubscriptions(prev => prev.map(s => (s.id === result.id ? result : s)));
     setActiveView('home');
     setActiveTab('subscriptions');
   };
 
+  const handleDeleteSubscription = async (id: string) => {
+    if (await api.subscriptions.delete(id)) {
+      setSubscriptions(prev => prev.filter(s => s.id !== id));
+    }
+  };
+
+  // --- Заказы ---
+  const handleUpdateOrder = async (updatedOrder: Order) => {
+    const result = await api.orders.updateStatus(updatedOrder.id, updatedOrder.rawStatus || updatedOrder.status);
+    if (result) setOrders(prev => prev.map(o => (o.id === result.id ? result : o)));
+  };
+
   const handlePlaceOrder = async (name: string, phone: string) => {
-    if (!selectedCarId) return;
-    const selectedCar = cars.find(c => c.id === selectedCarId);
     if (!selectedCar) return;
-
     const newOrder = await api.orders.create(selectedCar.id, selectedCar.priceRub, name, phone);
-
     if (newOrder) {
-      const updatedOrders = [newOrder, ...orders];
-      updatePersistedData(cars, updatedOrders, subscriptions);
-
-      // Set active values for bot notifier trigger
+      setOrders(prev => [newOrder, ...prev]);
       setSelectedOrderId(newOrder.id);
-
-      // Redirect to success / thank you tracking node logs view
       setActiveView('order-tracking');
     }
   };
 
+  const openCarDetails = (car: Car, from: AppView) => {
+    setSelectedCar(car);
+    setPreviousView(from);
+    setActiveView('car-details');
+  };
 
-  // Interactive router layout rendering
+  // --- Рендер клиентских экранов ---
   const renderClientView = () => {
     switch (activeView) {
       case 'home':
@@ -282,24 +185,14 @@ export default function App() {
             setTab={setActiveTab}
             orders={orders}
             subscriptions={subscriptions}
-            popularCars={cars.slice(0, 4)}
+            popularCars={popularCars}
             onOpenBrandSelector={() => setActiveView('makes-selector')}
             onOpenFilters={() => setActiveView('filters')}
-            onViewOrder={(id) => {
-              setSelectedOrderId(id);
-              setActiveView('order-tracking');
-            }}
+            onViewOrder={(id) => { setSelectedOrderId(id); setActiveView('order-tracking'); }}
             onDeleteSubscription={handleDeleteSubscription}
-            onViewCarDetails={(id) => {
-              setSelectedCarId(id);
-              setPreviousView('home');
-              setActiveView('car-details');
-            }}
+            onViewCarDetails={(car) => openCarDetails(car, 'home')}
             onOpenSubscriptions={() => setActiveView('subscriptions-list')}
-            onEditSubscription={(id) => {
-              setSelectedSubscriptionId(id);
-              setActiveView('edit-subscription');
-            }}
+            onEditSubscription={(id) => { setSelectedSubscriptionId(id); setActiveView('edit-subscription'); }}
           />
         );
 
@@ -307,44 +200,38 @@ export default function App() {
         return (
           <MakesSelector
             brands={filterOptions?.brands || []}
+            total={filterOptions?.total || 0}
             onBack={() => setActiveView('home')}
             onSelectBrand={(brand) => {
               if (brand) {
                 setSelectedBrand(brand);
-                const newFilters = { ...filters, make: brand, model: '' };
-                setFilters(newFilters);
-                api.cars.search(newFilters).then(setCars);
+                setFilters({ ...DEFAULT_FILTERS, make: brand.name, brandId: brand.id });
                 setActiveView('models-selector');
               } else {
-                const newFilters = { ...filters, make: '', model: '' };
-                setFilters(newFilters);
-                api.cars.search(newFilters).then(setCars);
+                setFilters({ ...DEFAULT_FILTERS });
                 setActiveView('listings');
               }
             }}
-            totalListingsCount={cars.length}
           />
         );
 
       case 'models-selector': {
-        const selectedBrandObj = filterOptions?.brands?.find((b: any) => b.name === selectedBrand);
-        const modelsForBrand = selectedBrandObj ? filterOptions?.models?.filter((m: any) => m.brand_id === selectedBrandObj.id) : [];
+        const groups = (filterOptions?.model_groups || []).filter(g => g.brand_id === selectedBrand?.id);
+        const brandTotal = (filterOptions?.brands || []).find(b => b.id === selectedBrand?.id)?.count || 0;
         return (
           <ModelsSelector
-            brand={selectedBrand}
-            models={modelsForBrand || []}
+            brand={selectedBrand?.name || ''}
+            groups={groups}
+            brandListingsCount={brandTotal}
             onBack={() => setActiveView('makes-selector')}
-            onSelectModel={(model) => {
-              if (model) {
-                const newFilters = { ...filters, model };
-                setFilters(newFilters);
-                api.cars.search(newFilters).then(setCars);
-              } else {
-                api.cars.search(filters).then(setCars);
-              }
+            onSelectGroup={(group) => {
+              setFilters(f => ({
+                ...f,
+                model: group?.name || '',
+                modelGroupId: group?.id ?? null,
+              }));
               setActiveView('listings');
             }}
-            brandListingsCount={cars.filter(c => c.make === selectedBrand).length}
           />
         );
       }
@@ -353,49 +240,45 @@ export default function App() {
         return (
           <FiltersScreen
             initialFilters={filters}
+            filterOptions={filterOptions}
             onBack={() => setActiveView('home')}
-            catalog={cars}
-            onApply={(updatedFilters) => {
-              setFilters(updatedFilters);
-              api.cars.search(updatedFilters).then(setCars);
-              setActiveView('listings');
-            }}
+            onApply={(updated) => { setFilters(updated); setActiveView('listings'); }}
           />
         );
 
       case 'listings':
         return (
           <ListingsScreen
-            catalog={cars}
             filters={filters}
-            onBack={() => {
-              setFilters({ ...DEFAULT_FILTERS });
-              api.cars.search(DEFAULT_FILTERS).then(setCars);
-              setActiveView('home');
-            }}
-            onOpenFilters={() => setActiveView('filters')}
-            onSelectCar={(id) => {
-              setSelectedCarId(id);
-              setPreviousView('listings');
-              setActiveView('car-details');
-            }}
-            onAddSubscription={handleAddSubscription}
+            filterOptions={filterOptions}
             subscriptions={subscriptions}
+            onBack={() => { setFilters({ ...DEFAULT_FILTERS }); setActiveView('home'); }}
+            onOpenFilters={() => setActiveView('filters')}
+            onSelectCar={(car) => openCarDetails(car, 'listings')}
+            onChangeFilters={setFilters}
+            onSubscribe={() => handleQuickSubscribe(filters)}
           />
         );
 
       case 'car-details':
-        const targetCar = cars.find(c => c.id === selectedCarId) || cars[0];
+        if (!selectedCar) {
+          return (
+            <div className="text-center py-10 space-y-3">
+              <p className="text-sm text-slate-500">Автомобиль не выбран.</p>
+              <button onClick={() => setActiveView('home')} className="bg-slate-900 text-white rounded-lg px-4 py-2 text-xs">Домой</button>
+            </div>
+          );
+        }
         return (
           <CarDetailsScreen
-            car={targetCar}
+            car={selectedCar}
             onBack={() => setActiveView(previousView)}
             onPlaceOrder={handlePlaceOrder}
           />
         );
 
-      case 'order-tracking':
-        const targetOrder = orders.find(o => o.id === (selectedOrderId || (orders[0]?.id))) || orders[0];
+      case 'order-tracking': {
+        const targetOrder = orders.find(o => o.id === (selectedOrderId || orders[0]?.id)) || orders[0];
         if (!targetOrder) {
           return (
             <div className="text-center py-10 space-y-3">
@@ -408,45 +291,35 @@ export default function App() {
           <OrderTrackerScreen
             order={targetOrder}
             onBack={() => setActiveView('home')}
-            onViewCheckpointPhoto={(checkpoint) => {
-              setSelectedCheckpoint(checkpoint);
-              setActiveView('order-checkpoint-photo');
-            }}
+            onViewCheckpointPhoto={(checkpoint) => { setSelectedCheckpoint(checkpoint); setActiveView('order-checkpoint-photo'); }}
           />
         );
+      }
 
       case 'order-checkpoint-photo':
         if (!selectedCheckpoint) {
           return (
             <div className="text-center py-10">
-              <p className="text-xs text-slate-400">Фото-отчет не выбран</p>
-              <button onClick={() => setActiveView('home')} className="text-xs text-sky-500">Назад в трекинг</button>
+              <p className="text-xs text-slate-400">Фото-отчёт не выбран</p>
+              <button onClick={() => setActiveView('order-tracking')} className="text-xs text-sky-500">Назад в трекинг</button>
             </div>
           );
         }
-        return (
-          <CheckpointPhotoScreen
-            checkpoint={selectedCheckpoint}
-            onBack={() => setActiveView('order-tracking')}
-          />
-        );
+        return <CheckpointPhotoScreen checkpoint={selectedCheckpoint} onBack={() => setActiveView('order-tracking')} />;
 
       case 'subscriptions-list':
         return (
           <SubscriptionsManager
             subscriptions={subscriptions}
+            filterOptions={filterOptions}
             onBack={() => setActiveView('home')}
             onAddSub={handleCreateFullSubscription}
             onDeleteSub={handleDeleteSubscription}
-            filterOptions={filterOptions}
-            onEditSub={(id) => {
-              setSelectedSubscriptionId(id);
-              setActiveView('edit-subscription');
-            }}
+            onEditSub={(id) => { setSelectedSubscriptionId(id); setActiveView('edit-subscription'); }}
           />
         );
 
-      case 'edit-subscription':
+      case 'edit-subscription': {
         const editingSub = subscriptions.find(s => s.id === selectedSubscriptionId);
         if (!editingSub) {
           return (
@@ -459,10 +332,12 @@ export default function App() {
         return (
           <EditSubscriptionScreen
             subscription={editingSub}
+            filterOptions={filterOptions}
             onBack={() => setActiveView('home')}
             onSave={handleUpdateSubscription}
           />
         );
+      }
 
       default:
         return <div>Элемент меню недоступен</div>;
@@ -471,13 +346,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 select-none antialiased flex flex-col font-sans">
-
-      {/* Main working playground space */}
       <main className="flex-1 w-full mx-auto p-4 md:p-6">
-
-        {/* Dynamic screen output window */}
         <section className="w-full">
-
           {isAuthenticating ? (
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm max-w-md mx-auto min-h-[640px] flex items-center justify-center">
               <div className="text-center space-y-3">
@@ -494,8 +364,6 @@ export default function App() {
             </div>
           ) : activeRole === 'client' ? (
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm max-w-md mx-auto min-h-[640px] flex flex-col justify-between relative overflow-hidden">
-
-              {/* Telegram App Bar Frame Mockup */}
               <div className="border-b border-stone-100 pb-3 mb-4 flex items-center justify-between text-slate-500 text-xs font-semibold">
                 <span className="text-slate-700 tracking-wide select-none flex items-center gap-1">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
@@ -508,9 +376,7 @@ export default function App() {
                         {telegramUser.first_name} {telegramUser.last_name || ''}
                       </div>
                       {telegramUser.username && (
-                        <div className="text-[10px] text-slate-400 leading-tight">
-                          @{telegramUser.username}
-                        </div>
+                        <div className="text-[10px] text-slate-400 leading-tight">@{telegramUser.username}</div>
                       )}
                     </div>
                     <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
@@ -519,36 +385,15 @@ export default function App() {
                   </div>
                 )}
               </div>
-
-              {/* Dynamic screen element */}
-              <div className="flex-1">
-                {renderClientView()}
-              </div>
+              <div className="flex-1">{renderClientView()}</div>
             </div>
           ) : (
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm min-h-[640px]">
-              {/* CRM Manager administrative workspace */}
               <AdminCRM
-                cars={cars}
                 orders={orders}
                 subscriptions={subscriptions}
-                onAddCar={handleAddCar}
                 onUpdateOrder={handleUpdateOrder}
-                onDeleteCar={handleDeleteCar}
-                onRefreshData={async () => {
-                  try {
-                    const [carsData, ordersData, subscriptionsData] = await Promise.all([
-                      api.cars.getAll(),
-                      api.orders.getAll(),
-                      api.subscriptions.getAll()
-                    ]);
-                    setCars(carsData);
-                    setOrders(ordersData);
-                    setSubscriptions(subscriptionsData);
-                  } catch (error) {
-                    console.error('Error refreshing data:', error);
-                  }
-                }}
+                onRefreshData={async () => { await reloadOrders(); await reloadSubscriptions(); }}
               />
             </div>
           )}

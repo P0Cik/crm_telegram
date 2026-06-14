@@ -1,14 +1,16 @@
+from django import forms
 from django.contrib import admin, messages
 from .models import (
     Brand, ModelGroup, Model, User, Car, CarPhoto,
     SearchRequest, ImportProfile, Order, OrderStatusHistory, ExchangeRate,
+    ValueTranslation,
 )
 
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name_en', 'name_ru', 'name_ko', 'code', 'source']
-    search_fields = ['name_en', 'name_ru', 'name_ko']
+    list_display = ['id', 'name_en', 'name_ko', 'code', 'source']
+    search_fields = ['name_en', 'name_ko']
     list_filter = ['source']
 
 
@@ -18,6 +20,15 @@ class ModelGroupAdmin(admin.ModelAdmin):
     list_filter = ['brand']
     search_fields = ['name_en', 'name_ko', 'brand__name_en']
     autocomplete_fields = ['brand']
+
+    def get_search_results(self, request, queryset, search_term):
+        """Учитывает ?brand=<id> — чтобы автокомплит группы в форме профиля
+        импорта показывал только группы выбранной марки (см. import_profile.js)."""
+        queryset, may_have_duplicates = super().get_search_results(request, queryset, search_term)
+        brand_id = request.GET.get('brand')
+        if brand_id:
+            queryset = queryset.filter(brand_id=brand_id)
+        return queryset, may_have_duplicates
 
 
 @admin.register(Model)
@@ -45,15 +56,16 @@ class ExchangeRateAdmin(admin.ModelAdmin):
 class CarPhotoInline(admin.TabularInline):
     model = CarPhoto
     extra = 0
-    fields = ['path', 'category', 'ordering']
+    fields = ['image_number', 'path', 'category', 'ordering']
+    ordering = ['image_number', 'ordering']
 
 
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
     list_display = ['id', 'brand', 'model', 'year', 'price_krw', 'mileage', 'fuel_type', 'color',
-                    'region', 'sales_status', 'source', 'external_id', 'is_active']
+                    'interior_color', 'region', 'sales_status', 'source', 'external_id', 'is_active']
     list_filter = ['source', 'is_active', 'sales_status', 'brand', 'fuel_type', 'year']
-    search_fields = ['vin', 'external_id', 'brand__name_en', 'model__name_en', 'badge']
+    search_fields = ['vin', 'external_id', 'vehicle_no', 'brand__name_en', 'model__name_en', 'badge']
     list_select_related = ['brand', 'model']
     autocomplete_fields = ['brand', 'model_group', 'model']
     inlines = [CarPhotoInline]
@@ -69,15 +81,39 @@ class SearchRequestAdmin(admin.ModelAdmin):
     autocomplete_fields = ['brand', 'model_group', 'model']
 
 
+class ImportProfileForm(forms.ModelForm):
+    """Форма профиля импорта с проверкой соответствия группы моделей марке."""
+    class Meta:
+        model = ImportProfile
+        fields = '__all__'
+
+    def clean(self):
+        cleaned = super().clean()
+        brand = cleaned.get('brand')
+        group = cleaned.get('model_group')
+        if group and brand and group.brand_id != brand.id:
+            self.add_error(
+                'model_group',
+                'Группа моделей не принадлежит выбранной марке. '
+                'Выберите группу этой марки или оставьте поле пустым (= все модели марки).'
+            )
+        return cleaned
+
+
 @admin.register(ImportProfile)
 class ImportProfileAdmin(admin.ModelAdmin):
+    form = ImportProfileForm
     list_display = ['id', 'name', 'brand', 'model_group', 'is_active', 'page_size', 'max_pages',
                     'backfill_completed', 'last_run_at']
     list_filter = ['is_active', 'source', 'brand']
     search_fields = ['name', 'brand__name_en', 'model_group__name_en']
     autocomplete_fields = ['brand', 'model_group']
     readonly_fields = ['last_run_at', 'created_at', 'backfill_completed']
-    actions = ['run_import']
+    actions = ['run_import', 'sync_catalog_action']
+
+    class Media:
+        # Фильтрует автокомплит «Группа моделей» по выбранной марке.
+        js = ('cars/import_profile.js',)
 
     @admin.action(description='Запустить импорт выбранных профилей')
     def run_import(self, request, queryset):
@@ -91,6 +127,20 @@ class ImportProfileAdmin(admin.ModelAdmin):
                 sync_encar_profile(profile.id)
             count += 1
         self.message_user(request, f'Запущен импорт {count} профиля(ей)', messages.SUCCESS)
+
+    @admin.action(description='Синхронизировать каталог Encar (марки/группы/модели)')
+    def sync_catalog_action(self, request, queryset):
+        from .tasks import sync_catalog
+        try:
+            sync_catalog.delay()
+        except Exception:
+            sync_catalog()
+        self.message_user(
+            request,
+            'Запущена синхронизация каталога Encar (марки, группы моделей и модели '
+            'для отслеживаемых марок). Новые названия появятся после завершения.',
+            messages.SUCCESS,
+        )
 
 
 class OrderStatusHistoryInline(admin.TabularInline):
@@ -134,3 +184,18 @@ class OrderStatusHistoryAdmin(admin.ModelAdmin):
     list_display = ['id', 'order', 'status', 'updated_by', 'created_at']
     list_filter = ['status', 'created_at']
     search_fields = ['order__id']
+
+
+@admin.register(ValueTranslation)
+class ValueTranslationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'kind', 'source_value', 'name_ru', 'name_en', 'canonical', 'name_hex',
+                    'auto', 'updated_at']
+    list_filter = ['kind', 'auto']
+    search_fields = ['source_value', 'name_ru', 'name_en']
+    list_editable = ['name_ru', 'name_en', 'canonical', 'auto']
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # ручная правка переводов должна сразу влиять на нормализацию
+        from .encar.normalization import refresh_translation_cache
+        refresh_translation_cache()

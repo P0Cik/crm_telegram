@@ -10,12 +10,37 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from . import normalization as norm
 
 logger = logging.getLogger(__name__)
 
 MAN = 10_000  # 1 만원 = 10 000 KRW (вон)
+
+# Номер изображения в имени файла Encar: ..._NNN.jpg (001, 002, ... 022 ...).
+_PHOTO_NUM_RE = re.compile(r"_(\d+)\.[a-zA-Z]+$")
+
+
+def _photo_number(path: str | None, code=None, ordering=None) -> int:
+    """
+    Возвращает номер изображения для сортировки фото по возрастанию.
+
+    Приоритет: имя файла (..._NNN.jpg) -> поле ``code`` (vehicles/detail) ->
+    ``ordering`` (mobile-список). Так порядок одинаков для всех эндпоинтов.
+    """
+    if path:
+        m = _PHOTO_NUM_RE.search(path)
+        if m:
+            return int(m.group(1))
+    for candidate in (code, ordering):
+        if candidate in (None, ""):
+            continue
+        try:
+            return int(float(candidate))
+        except (TypeError, ValueError):
+            continue
+    return 0
 
 # SalesStatus из Encar -> наш canonical-код (Car.SalesStatus)
 SALES_STATUS_MAP = {
@@ -69,7 +94,8 @@ def parse_list_item(item: dict) -> dict | None:
 
     fuel_code, fuel_ru, _fuel_en = norm.normalize_fuel(item.get("FuelType", ""))
     trans_code, trans_ru, _trans_en = norm.normalize_transmission(item.get("Transmission", ""))
-    color_ru, _color_en = norm.normalize_color(item.get("Color", ""))
+    color_ru, _color_en, _color_hex = norm.normalize_color(item.get("Color", ""))
+    seat_ru, _seat_en, _seat_hex = norm.normalize_seatcolor(item.get("SeatColor", ""))
     region_ru, _region_en = norm.normalize_region(item.get("OfficeCityState", ""))
 
     form_year = item.get("FormYear")
@@ -85,9 +111,11 @@ def parse_list_item(item: dict) -> dict | None:
     for ph in item.get("Photos", []) or []:
         loc = ph.get("location")
         if loc:
+            number = _photo_number(loc, ph.get("type"), ph.get("ordering"))
             photos.append({
                 "path": loc,
-                "ordering": ph.get("ordering", 0) or 0,
+                "image_number": number,
+                "ordering": ph.get("ordering", 0) or number,
                 "category": ph.get("type", "") or "",
             })
 
@@ -106,6 +134,9 @@ def parse_list_item(item: dict) -> dict | None:
         "color": color_ru,
         "color_raw": item.get("Color", "") or "",
         "color_hex": _first_hex(item.get("ColorExpression")),
+        "interior_color": seat_ru,
+        "interior_color_raw": item.get("SeatColor", "") or "",
+        "interior_color_hex": _first_hex(item.get("SeatColorExpression")),
         "region": region_ru,
         "region_raw": item.get("OfficeCityState", "") or "",
         "price_won": price_won,
@@ -142,16 +173,18 @@ def parse_detail(vehicle: dict) -> dict:
 
     fuel_code, fuel_ru, _ = norm.normalize_fuel(spec.get("fuelName", ""))
     trans_code, trans_ru, _ = norm.normalize_transmission(spec.get("transmissionName", ""))
-    color_ru, _ = norm.normalize_color(spec.get("colorName", ""))
+    color_ru, _, _ = norm.normalize_color(spec.get("colorName", ""))
     body_ru, _ = norm.normalize_body_type(spec.get("bodyName", ""))
 
     photos = []
     for ph in vehicle.get("photos", []) or []:
         path = ph.get("path")
         if path:
+            number = _photo_number(path, ph.get("code"), ph.get("ordering"))
             photos.append({
                 "path": path,
-                "ordering": ph.get("ordering", 0) or 0,
+                "image_number": number,
+                "ordering": ph.get("ordering", 0) or number,
                 "category": ph.get("type", "") or "",
             })
 
@@ -174,6 +207,7 @@ def parse_detail(vehicle: dict) -> dict:
         "model_name_en": category.get("modelEnglishName", "") or "",
         "model_code": category.get("modelCd", "") or "",
         "badge": category.get("gradeName", "") or "",
+        "badge_en": category.get("gradeEnglishName", "") or "",
         "year_month": int(category["yearMonth"]) if category.get("yearMonth") else None,
         "origin_price_won": man_to_won(category.get("originPrice")),
         "fuel_type": fuel_code,
@@ -184,6 +218,7 @@ def parse_detail(vehicle: dict) -> dict:
         "color": color_ru,
         "color_raw": spec.get("colorName", "") or "",
         "body_type": body_ru,
+        "body_type_raw": spec.get("bodyName", "") or "",
         "seat_count": spec.get("seatCount"),
         "has_accident_record": has_accident,
         "description_ko": contents.get("text", "") or "",

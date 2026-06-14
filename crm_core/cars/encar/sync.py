@@ -21,6 +21,17 @@ logger = logging.getLogger(__name__)
 SOURCE = "encar"
 
 
+def _ascii_en(value: str) -> str:
+    """Если исходное название уже латиницей (X5, 5-Series) — годится как name_en.
+
+    Так поле name_en не остаётся пустым для англоязычных названий из источника
+    (требование ТЗ). Корейские значения возвращают '' — их name_en заполнит
+    EngName из inav/детали.
+    """
+    value = (value or "").strip()
+    return value if value and value.isascii() else ""
+
+
 def _aware(dt_str):
     if not dt_str:
         return None
@@ -32,14 +43,23 @@ def _aware(dt_str):
     return dt
 
 
-def _fill_if_empty(obj, **fields) -> list[str]:
-    """Заполняет пустые поля объекта; возвращает изменённые имена полей."""
+def _apply_names(obj, *, name_en='', code='') -> bool:
+    """
+    Обновляет name_en/code справочной записи. name_en (если непустой) считается
+    авторитетным (EngName из inav / *EnglishName детали) и перезаписывает имеющееся
+    значение — иначе единожды попавший корейский фолбэк остался бы навсегда. code
+    заполняется, только если пуст. Возвращает True, если запись изменилась.
+    """
     changed = []
-    for name, value in fields.items():
-        if value and not getattr(obj, name, None):
-            setattr(obj, name, value)
-            changed.append(name)
-    return changed
+    if name_en and obj.name_en != name_en:
+        obj.name_en = name_en
+        changed.append('name_en')
+    if code and not obj.code:
+        obj.code = code
+        changed.append('code')
+    if changed:
+        obj.save(update_fields=changed)
+    return bool(changed)
 
 
 def get_or_create_catalog(brand_ko, group_ko='', model_ko='', *, source=SOURCE,
@@ -49,41 +69,40 @@ def get_or_create_catalog(brand_ko, group_ko='', model_ko='', *, source=SOURCE,
     """
     Создаёт/находит цепочку Brand -> ModelGroup -> Model по корейским названиям.
 
-    EN-названия и коды (когда известны, обычно из детальной карточки)
-    заполняются оппортунистически, если ещё пусты. Возвращает (brand, group, model);
-    отсутствующие уровни — None.
+    EN-названия берутся из EngName (inav) / *EnglishName (деталь). Явный EN
+    авторитетен и перезаписывает прежнее значение; name_en не «загрязняется»
+    корейским — при отсутствии EN остаётся пустым, а отображение падает на name_ko
+    (см. TranslatableNameMixin.display_name). Для марки при отсутствии явного EN
+    используется эвристика normalize_brand (известные KO-марки -> английское имя).
+    Возвращает (brand, group, model); отсутствующие уровни — None.
     """
     brand = group = model = None
     if not brand_ko:
         return brand, group, model
 
-    if not brand_en:
-        _ru, brand_en = norm.normalize_brand(brand_ko)
+    brand_default_en = brand_en or norm.normalize_brand(brand_ko)
     brand, _ = Brand.objects.get_or_create(
         source=source, name_ko=brand_ko,
-        defaults={"name_en": brand_en, "code": brand_code},
+        defaults={"name_en": brand_default_en, "code": brand_code},
     )
-    changed = _fill_if_empty(brand, name_en=brand_en, code=brand_code)
-    if changed:
-        brand.save(update_fields=changed)
+    # Перезаписываем только явным EngName, не эвристикой normalize_brand.
+    _apply_names(brand, name_en=brand_en, code=brand_code)
 
     if group_ko:
         group, _ = ModelGroup.objects.get_or_create(
             brand=brand, name_ko=group_ko,
-            defaults={"name_en": group_en or group_ko, "code": group_code, "source": source},
+            defaults={"name_en": group_en or _ascii_en(group_ko),
+                      "code": group_code, "source": source},
         )
-        changed = _fill_if_empty(group, name_en=group_en, code=group_code)
-        if changed:
-            group.save(update_fields=changed)
+        _apply_names(group, name_en=group_en or _ascii_en(group_ko), code=group_code)
 
     if model_ko and group:
         model, _ = Model.objects.get_or_create(
             model_group=group, name_ko=model_ko,
-            defaults={"name_en": model_en or model_ko, "code": model_code, "source": source},
+            defaults={"name_en": model_en or _ascii_en(model_ko),
+                      "code": model_code, "source": source},
         )
-        changed = _fill_if_empty(model, name_en=model_en, code=model_code)
-        if changed:
-            model.save(update_fields=changed)
+        _apply_names(model, name_en=model_en or _ascii_en(model_ko), code=model_code)
 
     return brand, group, model
 
@@ -92,10 +111,17 @@ def _sync_photos(car: Car, photos: list[dict], replace: bool = False):
     if replace:
         car.photos.all().delete()
     for ph in photos:
-        CarPhoto.objects.get_or_create(
+        number = ph.get("image_number", 0) or 0
+        _, created = CarPhoto.objects.get_or_create(
             car=car, path=ph["path"],
-            defaults={"ordering": ph.get("ordering", 0), "category": ph.get("category", "")},
+            defaults={"image_number": number,
+                      "ordering": ph.get("ordering", 0) or number,
+                      "category": ph.get("category", "")},
         )
+        # дозаполняем номер у фото, сохранённых до появления поля image_number
+        if not created:
+            CarPhoto.objects.filter(car=car, path=ph["path"], image_number=0).update(
+                image_number=number)
 
 
 def upsert_from_list(parsed: dict, source: str = SOURCE):
@@ -121,6 +147,9 @@ def upsert_from_list(parsed: dict, source: str = SOURCE):
         "color": parsed["color"],
         "color_raw": parsed["color_raw"],
         "color_hex": parsed["color_hex"],
+        "interior_color": parsed["interior_color"],
+        "interior_color_raw": parsed["interior_color_raw"],
+        "interior_color_hex": parsed["interior_color_hex"],
         "region": parsed["region"],
         "region_raw": parsed["region_raw"],
         "source_url": parsed["source_url"],
@@ -150,9 +179,9 @@ def apply_detail(car: Car, detail: dict):
     fields = {}
     if detail.get("vin"):
         fields["vin"] = detail["vin"]
-    for key in ("badge", "fuel_type", "fuel_type_raw",
+    for key in ("badge", "badge_en", "vehicle_no", "fuel_type", "fuel_type_raw",
                 "transmission", "transmission_raw", "color", "color_raw",
-                "body_type", "description_ko", "sales_status"):
+                "body_type", "body_type_raw", "description_ko", "sales_status"):
         val = detail.get(key)
         if val:
             fields[key] = val

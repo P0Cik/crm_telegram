@@ -29,10 +29,17 @@ class CarFilter(df.FilterSet):
     mileage_min = df.NumberFilter(field_name='mileage', lookup_expr='gte')
     mileage_max = df.NumberFilter(field_name='mileage', lookup_expr='lte')
 
+    # Объём двигателя приходит в литрах, в БД хранится в см³ (≈ литры*1000).
+    engine_volume_min = df.NumberFilter(method='filter_engine_min')
+    engine_volume_max = df.NumberFilter(method='filter_engine_max')
+
     fuel_type = df.CharFilter(field_name='fuel_type', lookup_expr='iexact')
     transmission = df.CharFilter(field_name='transmission', lookup_expr='icontains')
     body_type = df.CharFilter(field_name='body_type', lookup_expr='icontains')
     color = df.CharFilter(field_name='color', lookup_expr='icontains')
+    interior_color = df.CharFilter(field_name='interior_color', lookup_expr='icontains')
+    seat_count = df.NumberFilter(field_name='seat_count', lookup_expr='exact')
+    seat_count_min = df.NumberFilter(field_name='seat_count', lookup_expr='gte')
     region = df.CharFilter(field_name='region', lookup_expr='icontains')
     sales_status = df.CharFilter(field_name='sales_status', lookup_expr='iexact')
 
@@ -47,3 +54,9 @@ class CarFilter(df.FilterSet):
     def filter_price_max(self, queryset, name, value):
         krw = rub_to_krw(value)
         return queryset.filter(price_krw__lte=krw) if krw is not None else queryset
+
+    def filter_engine_min(self, queryset, name, value):
+        return queryset.filter(engine_volume__gte=float(value) * 1000) if value else queryset
+
+    def filter_engine_max(self, queryset, name, value):
+        return queryset.filter(engine_volume__lte=float(value) * 1000) if value else queryset

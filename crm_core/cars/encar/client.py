@@ -38,23 +38,43 @@ _DEFAULT_HEADERS = {
 }
 
 
-def build_q(manufacturer: str, model_group: str | None = None) -> str:
+def build_q(manufacturer: str | None = None, model_group: str | None = None,
+            car_type: str | None = "N") -> str:
     """
-    Собирает значение параметра ``q`` для list-эндпоинта.
+    Собирает значение параметра ``q`` для list/inav-эндпоинтов.
 
-    Пример (BMW X5):
+    Параметры опциональны, что позволяет строить запросы любого уровня:
+      * ``build_q()``                    — корень (все импортные марки);
+      * ``build_q(car_type=None)``       — корень со всеми марками (вкл. внутр. рынок);
+      * ``build_q("BMW")``               — все группы марки;
+      * ``build_q("BMW", "X5")``         — конкретная группа.
+
+    ``car_type``: ``"N"`` — импортные, ``"Y"`` — внутренний рынок Кореи,
+    ``"A"`` — все рынки одним запросом (Encar-фильтр CarType.A; экономит запросы
+    по сравнению с раздельной выборкой N и Y), ``None`` — сегмент CarType не
+    добавляется вовсе (тоже все, но без явного фильтра — для корневого inav).
+
+    Пример (BMW X5, импорт):
       (And.Hidden.N._.(C.CarType.N._.(C.Manufacturer.BMW._.ModelGroup.X5.))_.SellType.일반._.ServiceCopyCar.ORIGINAL.)
-    Без модели:
-      (And.Hidden.N._.(C.CarType.N._.Manufacturer.BMW.)_.SellType.일반._.ServiceCopyCar.ORIGINAL.)
     """
-    if model_group:
-        car_type = f"(C.CarType.N._.(C.Manufacturer.{manufacturer}._.ModelGroup.{model_group}.))"
+    if manufacturer and model_group:
+        man = f"(C.Manufacturer.{manufacturer}._.ModelGroup.{model_group}.)"
+    elif manufacturer:
+        man = f"Manufacturer.{manufacturer}."
     else:
-        car_type = f"(C.CarType.N._.Manufacturer.{manufacturer}.)"
-    return (
-        f"(And.Hidden.N._.{car_type}"
-        f"_.SellType.{SELL_TYPE}._.ServiceCopyCar.{SERVICE_COPY_CAR}.)"
-    )
+        man = ""
+
+    if car_type:
+        core = f"(C.CarType.{car_type}._.{man})" if man else f"CarType.{car_type}."
+    else:
+        core = man
+
+    segments = ["Hidden.N."]
+    if core:
+        segments.append(core)
+    segments.append(f"SellType.{SELL_TYPE}.")
+    segments.append(f"ServiceCopyCar.{SERVICE_COPY_CAR}.")
+    return "(And." + "_.".join(segments) + ")"
 
 
 class EncarClient:
@@ -94,6 +114,9 @@ class EncarClient:
     # -- public API --------------------------------------------------------
     # Encar отдаёт до 1000 записей за один запрос к list/mobile.
     MAX_PAGE_SIZE = 1000
+    # Групповой эндпоинт /vehicles отдаёт максимум 20 карточек за запрос —
+    # при большем числе id часть данных молча теряется (нет vin, объёма и т.д.).
+    MAX_VEHICLE_IDS = 20
 
     def search_list(self, q: str, offset: int = 0, limit: int = 100,
                     count: bool = True, inav: str | None = None) -> dict:
@@ -152,13 +175,23 @@ class EncarClient:
         return data
 
     def get_vehicles(self, vehicle_ids: Iterable[str | int]) -> list[dict]:
-        """Карточки сразу по нескольким id."""
-        ids = ",".join(str(i) for i in vehicle_ids)
-        data = self._get("/v1/readside/vehicles", params={"vehicleIds": ids})
-        time.sleep(self.request_delay)
-        if isinstance(data, list):
-            return data
-        return data.get("vehicles", []) or []
+        """
+        Карточки сразу по нескольким id. Не более ``MAX_VEHICLE_IDS`` (20) за
+        запрос — если передано больше, id разбиваются на несколько запросов,
+        чтобы Encar не обрезал ответ (иначе часть авто осталась бы без vin,
+        объёма двигателя и прочих детальных полей).
+        """
+        ids = [str(i) for i in vehicle_ids]
+        out: list[dict] = []
+        for start in range(0, len(ids), self.MAX_VEHICLE_IDS):
+            chunk = ids[start:start + self.MAX_VEHICLE_IDS]
+            data = self._get("/v1/readside/vehicles", params={"vehicleIds": ",".join(chunk)})
+            time.sleep(self.request_delay)
+            if isinstance(data, list):
+                out.extend(data)
+            else:
+                out.extend(data.get("vehicles", []) or [])
+        return out
 
     def close(self):
         self._client.close()

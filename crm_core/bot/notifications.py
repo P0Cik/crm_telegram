@@ -61,8 +61,9 @@ def send_photo(user, photo_url: str, caption: str, parse_mode: str = "HTML") -> 
 
 # --- Готовые шаблоны уведомлений --------------------------------------------
 def _car_title(car):
-    brand = car.brand.name if car.brand else "Авто"
-    model = car.model.name if car.model else ""
+    brand = car.brand.display_name() if car.brand else "Авто"
+    model = car.model.display_name() if car.model else (
+        car.model_group.display_name() if car.model_group else "")
     return f"{brand} {model} ({car.year})".strip()
 
 
@@ -91,8 +92,9 @@ def send_order_status_notification(user, order, new_status=None):
 
 def send_subscription_notification(user, search_request):
     """Подтверждение создания подписки."""
-    brand = search_request.brand.name if search_request.brand else "Любая марка"
-    model = search_request.model.name if search_request.model else "Любая модель"
+    brand = search_request.brand.display_name() if search_request.brand else "Любая марка"
+    model = (search_request.model.display_name() if search_request.model else
+             (search_request.model_group.display_name() if search_request.model_group else "Любая модель"))
     text = (
         f"🔔 Подписка создана!\n\n"
         f"🚗 Марка: {brand}\n"
@@ -107,8 +109,9 @@ def send_subscription_notification(user, search_request):
 def send_matching_car_notification(user, car, search_request=None):
     """Уведомление о появлении подходящего под подписку автомобиля."""
     price = ""
-    if car.car_price:
-        price = f"💰 {car.car_price:,.0f} ₽\n"
+    price_rub = car.price_rub()
+    if price_rub:
+        price = f"💰 {price_rub:,.0f} ₽\n"
     if car.mileage:
         price += f"📏 {car.mileage:,} км\n"
     caption = (
@@ -117,7 +120,7 @@ def send_matching_car_notification(user, car, search_request=None):
         f"{car.badge}\n"
         f"⛽ {car.get_fuel_type_display()}\n"
         f"{price}"
-        f"📍 {car.region or car.seller_country}\n\n"
+        f"📍 {car.region or 'Южная Корея'}\n\n"
         f"Откройте Mini App для деталей."
     )
     photo = car.photos.first()

@@ -21,7 +21,11 @@ app.conf.beat_schedule = {
     },
     'sync-catalog-daily': {
         'task': 'cars.tasks.sync_catalog',
-        'schedule': crontab(minute=30, hour=8),  # каждый день в 8:30
+        'schedule': crontab(minute=30, hour=8),  # каждый день в 8:30 (запускает и автоперевод)
+    },
+    'auto-translate-daily': {
+        'task': 'cars.tasks.auto_translate_unmapped',
+        'schedule': crontab(minute=30, hour=9),  # подстраховка: перевод новых значений
     },
     'update-exchange-rates-daily': {
         'task': 'cars.tasks.update_exchange_rates',

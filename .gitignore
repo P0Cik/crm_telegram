@@ -18,6 +18,8 @@ env/
 .venv/
 env.bak/
 venv.bak/
+.venv_test
+.venv_test/
 
 
 # Django

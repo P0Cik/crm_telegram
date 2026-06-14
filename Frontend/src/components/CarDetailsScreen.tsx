@@ -107,6 +107,9 @@ export default function CarDetailsScreen({
           <h1 className="text-xl font-bold text-slate-800 font-sans tracking-tight leading-tight">
             {car.make} {car.model}, {car.year}
           </h1>
+          {(car.badge || car.badgeEn) && (
+            <p className="text-xs text-slate-500 mt-1">{car.badge || car.badgeEn}</p>
+          )}
         </div>
 
         <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
@@ -162,13 +165,41 @@ export default function CarDetailsScreen({
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
-            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Цветовой тон</span>
-            <span className="text-sm font-bold text-slate-800 capitalize">{car.color}</span>
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Цвет кузова</span>
+            <span className="text-sm font-bold text-slate-800 capitalize flex items-center gap-1.5">
+              {car.colorHex && <span className="w-3 h-3 rounded-full border border-slate-300" style={{ backgroundColor: car.colorHex }} />}
+              {car.color || '—'}
+            </span>
+          </div>
+
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Цвет салона</span>
+            <span className="text-sm font-bold text-slate-800 capitalize flex items-center gap-1.5">
+              {car.interiorColorHex && <span className="w-3 h-3 rounded-full border border-slate-300" style={{ backgroundColor: car.interiorColorHex }} />}
+              {car.interiorColor || '—'}
+            </span>
+          </div>
+
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Количество мест</span>
+            <span className="text-sm font-bold text-slate-800">{car.seatCount ? `${car.seatCount}` : '—'}</span>
+          </div>
+
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Регион (Корея)</span>
+            <span className="text-sm font-bold text-slate-800">{car.region || '—'}</span>
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
             <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Статус</span>
             <span className="text-sm font-bold text-slate-800">{car.salesStatus || '—'}</span>
+          </div>
+
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
+            <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">История ДТП</span>
+            <span className="text-sm font-bold text-slate-800">
+              {car.hasAccidentRecord == null ? '—' : car.hasAccidentRecord ? 'Есть записи' : 'Не зафиксировано'}
+            </span>
           </div>
         </div>
 

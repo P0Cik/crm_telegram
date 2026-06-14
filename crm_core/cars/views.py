@@ -84,7 +84,7 @@ class BrandViewSet(viewsets.ModelViewSet):
     serializer_class = BrandSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['name_en', 'name_ru', 'name_ko']
+    search_fields = ['name_en', 'name_ko']
     ordering_fields = ['name_en', 'name_ko']
     ordering = ['name_en']
 
@@ -176,18 +176,21 @@ class CarViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def filters(self, request):
-        """Доступные значения фильтров для построения UI."""
+        """
+        Доступные значения фильтров для построения UI (считаются по активным
+        авто). Помимо каталога марок/групп/моделей отдаёт распределение по КПП,
+        кузову, цвету, региону и топливу с количеством, а также диапазоны года,
+        цены (в рублях) и пробега — чтобы фронтенд строил полные фильтры.
+        """
         active = Car.objects.filter(is_active=True)
 
         def catalog(model_cls, related):
-            qs = (model_cls.objects.filter(**{f'{related}__is_active': True})
-                  .distinct()
-                  .annotate(count=Count(related, filter=Q(**{f'{related}__is_active': True}))))
-            return qs
+            return (model_cls.objects.filter(**{f'{related}__is_active': True})
+                    .distinct()
+                    .annotate(count=Count(related, filter=Q(**{f'{related}__is_active': True}))))
 
         brands = [
-            {'id': b.id, 'name': b.display_name('en'), 'name_ru': b.name_ru,
-             'name_ko': b.name_ko, 'count': b.count}
+            {'id': b.id, 'name': b.display_name('en'), 'name_ko': b.name_ko, 'count': b.count}
             for b in catalog(Brand, 'car').order_by('-count')
         ]
         model_groups = [
@@ -199,20 +202,47 @@ class CarViewSet(viewsets.ModelViewSet):
              'brand_id': m.model_group.brand_id, 'count': m.count}
             for m in catalog(Model, 'car').select_related('model_group').order_by('-count')
         ]
+
+        def distinct_values(field):
+            rows = (active.exclude(**{field: ''})
+                    .values(field).annotate(count=Count('id')).order_by('-count'))
+            return [{'value': r[field], 'count': r['count']} for r in rows if r[field]]
+
+        fuel_types = [
+            {'value': v, 'display': d, 'count': active.filter(fuel_type=v).count()}
+            for v, d in Car.FuelType.choices
+        ]
+        fuel_types = [f for f in fuel_types if f['count'] > 0]
+
+        # Количество мест: распределение по числу мест (для фильтра)
+        seat_counts = [
+            {'value': r['seat_count'], 'count': r['count']}
+            for r in (active.exclude(seat_count__isnull=True)
+                      .values('seat_count').annotate(count=Count('id')).order_by('seat_count'))
+        ]
+
         year_range = active.aggregate(min=Min('year'), max=Max('year'))
+        mileage_range = active.aggregate(min=Min('mileage'), max=Max('mileage'))
         krw_range = active.aggregate(min=Min('price_krw'), max=Max('price_krw'))
         rate = get_krw_rub_rate()
         price_range = {
             'min': float(krw_to_rub(krw_range['min'], rate)) if krw_range['min'] else None,
             'max': float(krw_to_rub(krw_range['max'], rate)) if krw_range['max'] else None,
         }
-        fuel_types = [{'value': v, 'display': d} for v, d in Car.FuelType.choices]
         return Response({
             'brands': brands,
             'model_groups': model_groups,
             'models': models,
             'fuel_types': fuel_types,
+            'transmissions': distinct_values('transmission'),
+            'body_types': distinct_values('body_type'),
+            'colors': distinct_values('color'),
+            'interior_colors': distinct_values('interior_color'),
+            'seat_counts': seat_counts,
+            'regions': distinct_values('region'),
+            'total': active.count(),
             'year_range': year_range,
+            'mileage_range': mileage_range,
             'price_range': price_range,
         })
 

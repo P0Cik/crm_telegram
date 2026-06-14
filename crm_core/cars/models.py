@@ -11,25 +11,22 @@ from django.core.validators import MinValueValidator
 # Основной язык отображения для каталога — английский (EN), русский — опционален.
 
 class TranslatableNameMixin(models.Model):
-    """Общие поля перевода названия справочника.
+    """Общие поля названия справочника.
 
     name_ko — исходное значение источника (Encar Value, может быть латиницей).
-    name_en — английское название (основное для отображения каталога).
-    name_ru — русское (опциональное переопределение).
+    name_en — английское название (основное для отображения каталога), берётся
+    из Metadata.EngName фасетов inav / *EnglishName детальной карточки Encar.
     """
     source = models.CharField('Источник', max_length=32, default='encar', db_index=True)
     code = models.CharField('Код источника', max_length=32, blank=True, default='')
     name_ko = models.CharField('Название (источник)', max_length=255)
     name_en = models.CharField('Название (EN)', max_length=255, blank=True, default='')
-    name_ru = models.CharField('Название (RU)', max_length=255, blank=True, default='')
 
     class Meta:
         abstract = True
 
     def display_name(self, lang='en'):
-        """Каталог отображается на английском; RU как переопределение."""
-        if lang == 'ru':
-            return self.name_ru or self.name_en or self.name_ko
+        """Каталог отображается на английском; при отсутствии — исходное значение."""
         return self.name_en or self.name_ko
 
     def __str__(self):
@@ -72,6 +69,62 @@ class Model(TranslatableNameMixin):
     @property
     def brand(self):
         return self.model_group.brand
+
+
+class ValueTranslation(models.Model):
+    """
+    Единый справочник значений-перечислений Encar (топливо, КПП, кузов, цвет,
+    цвет салона, регион). Это ЕДИНСТВЕННЫЙ источник переводов на рантайме:
+    нормализация (cars/encar/normalization.py) читает только из него (через
+    кеш в памяти), статических словарей в коде больше нет.
+
+    Наполняется:
+      * первичным сидом из inav (data-миграция 0003 — все возможные значения с
+        переводами RU/EN, canonical-кодом и hex-цветом);
+      * автопереводом новых значений (cars/encar/translate.py);
+      * вручную через админку.
+
+    Порядок разрешения: эта таблица -> сырое значение (с постановкой в очередь на
+    автоперевод, если перевода ещё нет).
+
+    Поля canonical/name_hex нужны не всем видам:
+      * canonical — код для БД у топлива (PETROL/DIESEL/...) и КПП (AUTO/...);
+      * name_hex — HEX-цвет для color/seatcolor (для отрисовки кружка во фронте).
+    """
+    class Kind(models.TextChoices):
+        FUEL = 'fuel', 'Топливо'
+        TRANSMISSION = 'transmission', 'Коробка передач'
+        BODY_TYPE = 'body_type', 'Тип кузова'
+        COLOR = 'color', 'Цвет'
+        SEATCOLOR = 'seatcolor', 'Цвет салона'
+        REGION = 'region', 'Регион'
+
+    kind = models.CharField('Тип значения', max_length=20, choices=Kind.choices, db_index=True)
+    source_value = models.CharField('Исходное значение (источник)', max_length=255)
+    name_ru = models.CharField('Перевод (RU)', max_length=255, blank=True, default='')
+    name_en = models.CharField('Перевод (EN)', max_length=255, blank=True, default='')
+    canonical = models.CharField('Canonical-код', max_length=20, blank=True, default='',
+                                 help_text='Код для БД (топливо: PETROL/DIESEL/...; КПП: AUTO/MANUAL/...)')
+    name_hex = models.CharField('Цвет (HEX)', max_length=16, blank=True, default='',
+                                help_text='HEX-цвет значения (для цвета кузова/салона)')
+    auto = models.BooleanField('Автоперевод', default=False,
+                               help_text='Снимите галочку при ручной правке, чтобы автоперевод не перезаписывал значение')
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлён', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Перевод значения'
+        verbose_name_plural = 'Переводы значений'
+        unique_together = (('kind', 'source_value'),)
+        ordering = ['kind', 'source_value']
+
+    def __str__(self):
+        return f"[{self.get_kind_display()}] {self.source_value} → {self.name_ru or self.name_en or '—'}"
+
+    @property
+    def pending(self) -> bool:
+        """Перевод ещё не получен (ждёт автоперевода)."""
+        return not (self.name_ru or self.name_en)
 
 
 class User(AbstractUser):
@@ -158,6 +211,8 @@ class Car(models.Model):
                                     verbose_name='Группа моделей')
     model = models.ForeignKey(Model, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Модель')
     badge = models.CharField('Комплектация', max_length=255, blank=True, default='')
+    badge_en = models.CharField('Комплектация (EN)', max_length=255, blank=True, default='')
+    vehicle_no = models.CharField('Гос. номер (источник)', max_length=32, blank=True, default='')
 
     # --- Цена (только воны; рубли — по требованию) ---
     price_krw = models.BigIntegerField('Цена (KRW, воны)', null=True, blank=True)
@@ -175,7 +230,11 @@ class Car(models.Model):
     color = models.CharField("Цвет", max_length=50, blank=True, default='')
     color_raw = models.CharField("Цвет (оригинал)", max_length=50, blank=True, default='')
     color_hex = models.CharField("Цвет (HEX)", max_length=16, blank=True, default='')
+    interior_color = models.CharField("Цвет салона", max_length=50, blank=True, default='')
+    interior_color_raw = models.CharField("Цвет салона (оригинал)", max_length=50, blank=True, default='')
+    interior_color_hex = models.CharField("Цвет салона (HEX)", max_length=16, blank=True, default='')
     body_type = models.CharField("Тип кузова", max_length=50, blank=True, default='')
+    body_type_raw = models.CharField("Тип кузова (оригинал)", max_length=50, blank=True, default='')
     seat_count = models.IntegerField("Количество мест", null=True, blank=True)
     region = models.CharField("Регион продавца", max_length=100, blank=True, default='')
     region_raw = models.CharField("Регион (оригинал)", max_length=100, blank=True, default='')
@@ -217,13 +276,17 @@ class CarPhoto(models.Model):
     """Фотография автомобиля (хранится относительный путь источника)."""
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='photos', verbose_name='Автомобиль')
     path = models.CharField('Путь', max_length=255)
+    image_number = models.IntegerField('Номер изображения', default=0, db_index=True,
+                                       help_text='Номер из имени файла (..._NNN.jpg) / поля code; задаёт порядок')
     ordering = models.FloatField('Порядок', default=0)
     category = models.CharField('Категория', max_length=20, blank=True, default='')
 
     class Meta:
         verbose_name = 'Фото автомобиля'
         verbose_name_plural = 'Фото автомобилей'
-        ordering = ['ordering']
+        # Фото идут по возрастанию номера изображения (поле image_number); ordering
+        # — запасной ключ для совместимости со старыми записями.
+        ordering = ['image_number', 'ordering']
         unique_together = (('car', 'path'),)
 
     @property
@@ -281,8 +344,15 @@ class ImportProfile(models.Model):
     (выпадающие списки на основе справочника). Сбор выполняет встроенный модуль
     импорта (cars/encar).
     """
+    class Market(models.TextChoices):
+        IMPORT = 'N', 'Импортные (ввезённые в Корею)'
+        DOMESTIC = 'Y', 'Внутренний рынок Кореи'
+        ALL = 'A', 'Все'
+
     name = models.CharField('Название', max_length=255)
     source = models.CharField('Источник', max_length=32, default='encar')
+    car_type = models.CharField('Рынок', max_length=1, choices=Market.choices, default=Market.IMPORT,
+                                help_text='Какие авто тянуть: импортные, внутренний рынок Кореи или все')
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='import_profiles',
                               verbose_name='Марка')
     model_group = models.ForeignKey(ModelGroup, on_delete=models.PROTECT, null=True, blank=True,

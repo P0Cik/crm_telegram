@@ -11,9 +11,12 @@ from urllib.parse import urlencode
 from django.test import TestCase
 
 from cars import currency
-from cars.encar import mapper, normalization as norm, sync
+from cars.encar import catalog, mapper, normalization as norm, sync, translate
+from cars.encar.client import build_q
 from cars.matching import car_matches_request, match_cars_to_subscriptions
-from cars.models import Brand, Car, Model, ModelGroup, SearchRequest, User
+from cars.models import (
+    Brand, Car, ImportProfile, Model, ModelGroup, SearchRequest, User, ValueTranslation,
+)
 from cars.telegram_views import verify_telegram_data
 
 
@@ -191,3 +194,119 @@ class TelegramAuthTests(TestCase):
     def test_expired_initdata(self):
         init = self._build_init_data(auth_date=int(time.time()) - 100000)
         self.assertIsNone(verify_telegram_data(init, self.BOT_TOKEN, ttl=3600))
+
+
+# --- Построение q для list/inav ---------------------------------------------
+class BuildQTests(TestCase):
+    def test_brand_and_group_import(self):
+        self.assertEqual(
+            build_q('BMW', 'X5'),
+            '(And.Hidden.N._.(C.CarType.N._.(C.Manufacturer.BMW._.ModelGroup.X5.))'
+            '_.SellType.일반._.ServiceCopyCar.ORIGINAL.)'
+        )
+
+    def test_brand_only_import(self):
+        self.assertEqual(
+            build_q('BMW'),
+            '(And.Hidden.N._.(C.CarType.N._.Manufacturer.BMW.)_.SellType.일반._.ServiceCopyCar.ORIGINAL.)'
+        )
+
+    def test_root_all_market(self):
+        # car_type=None -> без фильтра CarType (все марки, вкл. внутренний рынок)
+        self.assertEqual(
+            build_q(car_type=None),
+            '(And.Hidden.N._.SellType.일반._.ServiceCopyCar.ORIGINAL.)'
+        )
+
+
+# --- Каталог из inav (EngName/Code) -----------------------------------------
+INAV_SAMPLE = {
+    "Nodes": [
+        {"Name": "Manufacturer", "Facets": [
+            {"Value": "BMW", "Metadata": {"EngName": ["BMW"], "Code": ["012"]},
+             "Refinements": {"Nodes": [
+                 {"Name": "ModelGroup", "Facets": [
+                     {"Value": "5시리즈", "Metadata": {"EngName": ["5-Series"], "Code": ["003"]},
+                      "Refinements": {"Nodes": [
+                          {"Name": "Model", "Facets": [
+                              {"Value": "5시리즈 (G60)", "Metadata": {"EngName": [""], "Code": ["100"]}},
+                          ]},
+                      ]}},
+                 ]},
+             ]}},
+            {"Value": "현대", "Metadata": {"EngName": ["Hyundai"], "Code": ["005"]}},
+        ]},
+    ]
+}
+
+
+class CatalogInavTests(TestCase):
+    def test_iter_facets_reads_engname(self):
+        groups = catalog.iter_facets(INAV_SAMPLE, "ModelGroup")
+        self.assertEqual(groups, [("5시리즈", "5-Series", "003")])
+
+    def test_upsert_brands_with_english_names(self):
+        n = catalog.upsert_brands(INAV_SAMPLE)
+        self.assertEqual(n, 2)
+        self.assertEqual(Brand.objects.get(name_ko="현대").name_en, "Hyundai")
+        self.assertEqual(Brand.objects.get(name_ko="BMW").name_en, "BMW")
+
+    def test_upsert_groups_for_brand(self):
+        catalog.upsert_groups(INAV_SAMPLE, "BMW")
+        group = ModelGroup.objects.get(name_ko="5시리즈")
+        self.assertEqual(group.name_en, "5-Series")
+        self.assertEqual(group.code, "003")
+        self.assertEqual(group.brand.name_ko, "BMW")
+
+    def test_engname_overwrites_korean_fallback(self):
+        # сначала группа без EN (как при импорте из списка) -> name_en пуст
+        sync.get_or_create_catalog("BMW", "5시리즈")
+        group = ModelGroup.objects.get(name_ko="5시리즈")
+        self.assertEqual(group.name_en, "")
+        self.assertEqual(group.display_name(), "5시리즈")  # падает на name_ko
+        # затем приходит EngName из inav -> name_en заполняется/перезаписывается
+        sync.get_or_create_catalog("BMW", "5시리즈", group_en="5-Series")
+        group.refresh_from_db()
+        self.assertEqual(group.name_en, "5-Series")
+        self.assertEqual(group.display_name(), "5-Series")
+
+
+# --- Переводы значений (статика + БД-словарь) --------------------------------
+class TranslationTests(TestCase):
+    def setUp(self):
+        norm.refresh_translation_cache()
+
+    def test_static_translation_used_first(self):
+        ru, en = translate.translate_value('color', '흰색', store=False)
+        self.assertEqual(ru, 'Белый')
+        self.assertEqual(en, 'White')
+
+    def test_db_override_picked_up_after_refresh(self):
+        ValueTranslation.objects.create(
+            kind='color', source_value='무지개색', name_ru='Радужный', name_en='Rainbow')
+        norm.refresh_translation_cache()
+        # normalize_color -> (ru, en, hex); сверяем перевод
+        self.assertEqual(norm.normalize_color('무지개색')[:2], ('Радужный', 'Rainbow'))
+
+    def test_is_known(self):
+        self.assertTrue(norm.is_known('fuel', '디젤'))
+        self.assertFalse(norm.is_known('fuel', '완전새로운연료'))
+
+    def test_normalize_brand_returns_string(self):
+        self.assertEqual(norm.normalize_brand('현대'), 'Hyundai')
+        self.assertEqual(norm.normalize_brand('BMW'), 'BMW')
+        # неизвестная латинская марка возвращается как есть
+        self.assertEqual(norm.normalize_brand('Rivian'), 'Rivian')
+        # неизвестная корейская марка -> '' (заполнит EngName/автоперевод)
+        self.assertEqual(norm.normalize_brand('새브랜드'), '')
+
+
+# --- Профиль импорта: рынок --------------------------------------------------
+class ImportProfileMarketTests(TestCase):
+    def test_default_market_is_import(self):
+        brand = Brand.objects.create(name_ko='BMW', name_en='BMW')
+        profile = ImportProfile.objects.create(name='BMW', brand=brand)
+        self.assertEqual(profile.car_type, ImportProfile.Market.IMPORT)
+        # q профиля по умолчанию — импортный
+        market = profile.car_type if profile.car_type in ('N', 'Y') else None
+        self.assertEqual(market, 'N')

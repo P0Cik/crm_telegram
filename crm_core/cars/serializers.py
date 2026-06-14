@@ -20,7 +20,7 @@ class BrandSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Brand
-        fields = ['id', 'name', 'name_en', 'name_ru', 'name_ko']
+        fields = ['id', 'name', 'name_en', 'name_ko']
 
     def get_name(self, obj):
         return obj.display_name('en')
@@ -35,7 +35,7 @@ class ModelGroupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ModelGroup
-        fields = ['id', 'name', 'name_en', 'name_ru', 'name_ko', 'brand', 'brand_id']
+        fields = ['id', 'name', 'name_en', 'name_ko', 'brand', 'brand_id']
 
     def get_name(self, obj):
         return obj.display_name('en')
@@ -52,7 +52,7 @@ class ModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Model
-        fields = ['id', 'name', 'name_en', 'name_ru', 'name_ko', 'model_group', 'model_group_id', 'brand']
+        fields = ['id', 'name', 'name_en', 'name_ko', 'model_group', 'model_group_id', 'brand']
 
     def get_name(self, obj):
         return obj.display_name('en')
@@ -108,7 +108,7 @@ class CarPhotoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CarPhoto
-        fields = ['id', 'url', 'ordering', 'category']
+        fields = ['id', 'url', 'image_number', 'ordering', 'category']
 
 
 class CarSerializer(serializers.ModelSerializer):
@@ -127,18 +127,20 @@ class CarSerializer(serializers.ModelSerializer):
     price_won = serializers.IntegerField(source='price_krw', read_only=True)
     price_rub = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
+    photos = CarPhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Car
         fields = [
             'id', 'source', 'external_id', 'source_url', 'is_active',
-            'vin', 'brand', 'model_group', 'model', 'badge',
+            'vin', 'vehicle_no', 'brand', 'model_group', 'model', 'badge', 'badge_en',
             'year', 'year_month', 'fuel_type', 'fuel_type_display',
-            'engine_volume', 'transmission', 'color', 'color_hex', 'body_type',
+            'engine_volume', 'transmission', 'color', 'color_hex',
+            'interior_color', 'interior_color_hex', 'body_type',
             'seat_count', 'region', 'sales_status', 'sales_status_display',
             'has_accident_record', 'origin_price_krw',
             'description_ko', 'description_ru',
-            'price_won', 'price_rub', 'mileage', 'images',
+            'price_won', 'price_rub', 'mileage', 'images', 'photos',
             'brand_id', 'model_id',
         ]
 

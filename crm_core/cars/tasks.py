@@ -1,6 +1,7 @@
 """
 Celery-задачи: импорт и синхронизация предложений Encar, обогащение деталей,
-матчинг подписок, обновление справочника и курса валют.
+матчинг подписок, обновление справочника (каталога) и курса валют, автоперевод
+новых значений.
 """
 import logging
 
@@ -9,7 +10,9 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-ENRICH_CHUNK = 50  # сколько id за один запрос к vehicles?vehicleIds=
+# Групповой эндпоинт /vehicles отдаёт максимум 20 карточек за запрос; при большем
+# числе id Encar обрезает ответ и часть авто остаётся без vin/объёма двигателя/...
+ENRICH_CHUNK = 20
 
 
 @shared_task
@@ -46,7 +49,9 @@ def sync_encar_profile(profile_id):
 
     manufacturer = profile.brand.name_ko
     model_group = profile.model_group.name_ko if profile.model_group_id else None
-    q = build_q(manufacturer, model_group)
+    # N/Y/A передаём напрямую: "A" тянет оба рынка одним запросом (CarType.A),
+    # не требуя двух раздельных прогонов по N и Y.
+    q = build_q(manufacturer, model_group, car_type=profile.car_type)
 
     seen_ids = set()
     to_enrich = []          # external_id новых/изменившихся
@@ -141,7 +146,8 @@ def sync_encar_profile(profile_id):
 def enrich_cars(external_ids):
     """
     Групповое обогащение: дозагружает детальные карточки сразу по нескольким id
-    через ``/v1/readside/vehicles?vehicleIds=`` (чанками) и обновляет записи Car.
+    через ``/v1/readside/vehicles?vehicleIds=`` (чанками по ENRICH_CHUNK=20) и
+    обновляет записи Car (vin, объём двигателя, кузов, опции, полный набор фото).
     """
     from .models import Car
     from .encar.client import EncarClient
@@ -185,37 +191,173 @@ def match_new_cars(car_ids):
 
 
 @shared_task
-def sync_catalog(manufacturers=None):
+def sync_catalog(deep=False, do_translate=True):
     """
-    Обновляет справочник Brand -> ModelGroup -> Model из inav Encar.
+    Полная синхронизация справочника Brand -> ModelGroup -> Model из inav Encar.
 
-    Без аргументов обходит марки активных профилей импорта. inav раскрывает дерево
-    моделей только для запрошенной марки, поэтому запросы делаются по каждой марке.
+    Стратегия оптимальна по числу запросов (inav раскрывает дочерние уровни только
+    для выбранного узла):
+      1) один inav без марки                  -> все марки (EngName/Code);
+      2) по одному inav на марку              -> все группы каждой марки;
+      3) модели (с кодом поколения)           -> только для марок с активным
+         профилем импорта (deep=True -> для всех марок), по одному inav на группу.
+
+    После сбора запускает автоперевод недостающих названий и значений
+    (do_translate=True). Вызывается celery-beat раз в сутки и вручную
+    (management-команда sync_catalog / действие в админке профилей импорта).
     """
-    from .models import ImportProfile
+    from .models import Brand, ModelGroup, ImportProfile
     from .encar.client import EncarClient, build_q
     from .encar import catalog
 
-    if manufacturers is None:
-        manufacturers = list(
-            ImportProfile.objects.filter(is_active=True)
-            .values_list("brand__name_ko", flat=True).distinct()
-        )
-    manufacturers = [m for m in manufacturers if m]
-
     totals = {"brands": 0, "groups": 0, "models": 0}
+    monitored = {
+        m for m in ImportProfile.objects.filter(is_active=True)
+        .values_list("brand__name_ko", flat=True) if m
+    }
+
     with EncarClient() as client:
-        for man in manufacturers:
+        # 1) Все марки (внутренний рынок + импорт)
+        try:
+            root_inav = client.get_inav(build_q(car_type=None))
+            totals["brands"] = catalog.upsert_brands(root_inav)
+        except Exception as exc:
+            logger.error("sync_catalog: не удалось получить список марок: %s", exc)
+            return totals
+
+        brand_kos = list(Brand.objects.values_list("name_ko", flat=True))
+
+        # 2) Группы каждой марки
+        for brand_ko in brand_kos:
             try:
-                inav = client.get_inav(build_q(man))
-                stats = catalog.upsert_catalog_from_inav(inav)
+                binav = client.get_inav(build_q(brand_ko, car_type=None))
             except Exception as exc:
-                logger.error("Ошибка sync_catalog для %s: %s", man, exc)
+                logger.error("sync_catalog: inav марки %s: %s", brand_ko, exc)
                 continue
-            for k in totals:
-                totals[k] += stats.get(k, 0)
-    logger.info("Справочник обновлён: %s", totals)
+            totals["groups"] += catalog.upsert_groups(binav, brand_ko)
+
+            if not (deep or brand_ko in monitored):
+                continue
+
+            # 3) Модели — только для отслеживаемых марок (или всех при deep)
+            group_kos = list(
+                ModelGroup.objects.filter(brand__name_ko=brand_ko)
+                .values_list("name_ko", flat=True)
+            )
+            for group_ko in group_kos:
+                try:
+                    ginav = client.get_inav(build_q(brand_ko, group_ko, car_type=None))
+                except Exception as exc:
+                    logger.error("sync_catalog: inav %s/%s: %s", brand_ko, group_ko, exc)
+                    continue
+                totals["models"] += catalog.upsert_models(ginav, brand_ko, group_ko)
+
+    logger.info("Каталог синхронизирован: %s (deep=%s)", totals, deep)
+    if do_translate:
+        try:
+            auto_translate_unmapped.delay()
+        except Exception:  # брокер недоступен (ручной запуск) — переводим синхронно
+            auto_translate_unmapped()
     return totals
+
+
+@shared_task
+def auto_translate_unmapped(limit=2000):
+    """
+    Автоперевод новых значений, не покрытых статическими словарями:
+      * значения-перечисления (топливо/КПП/кузов/цвет/регион) из полей *_raw авто;
+      * английские названия марок/групп/моделей (name_en) с корейским name_ko.
+
+    Переводы кешируются в ValueTranslation, после чего поля авто (color/
+    transmission/region/body_type) и каталога дозаполняются. Безопасно офлайн:
+    при недоступности deep-translator непокрытые значения остаются как есть и
+    регистрируются как «ожидающие» (видны в админке для ручной правки).
+    """
+    from .models import Car
+    from .encar import normalization as norm, translate
+
+    available = translate.translator_available()
+    if not available:
+        logger.warning("deep-translator недоступен — будут отмечены значения для ручного перевода")
+
+    translated = 0
+    # kind -> поле Car с исходным (сырым) значением источника
+    raw_fields = {
+        "fuel": "fuel_type_raw",
+        "transmission": "transmission_raw",
+        "color": "color_raw",
+        "seatcolor": "interior_color_raw",
+        "body_type": "body_type_raw",
+        "region": "region_raw",
+    }
+    for kind, field in raw_fields.items():
+        values = list(
+            Car.objects.exclude(**{field: ""})
+            .values_list(field, flat=True).distinct()[:limit]
+        )
+        for value in values:
+            if not value or norm.is_known(kind, value):
+                continue
+            if available:
+                ru, en = translate.translate_value(kind, value)
+                if ru or en:
+                    translated += 1
+                else:
+                    translate.ensure_pending(kind, value)
+            else:
+                translate.ensure_pending(kind, value)
+
+    norm.refresh_translation_cache()
+    updated = _backfill_car_translations()
+    cat_filled = _translate_catalog_gaps() if available else 0
+
+    result = {"translated": translated, "cars_updated": updated, "catalog_filled": cat_filled}
+    logger.info("Автоперевод значений завершён: %s", result)
+    return result
+
+
+def _backfill_car_translations() -> int:
+    """Пересчитывает переводимые поля авто по обновлённому справочнику
+    (<field>_raw -> перевод). Возвращает число обновлённых записей Car."""
+    from .models import Car
+    from .encar import normalization as norm
+
+    updated = 0
+    # (исходное поле, целевое поле, функция перевода -> ru)
+    specs = [
+        ("color_raw", "color", lambda v: norm.normalize_color(v)[0]),
+        ("interior_color_raw", "interior_color", lambda v: norm.normalize_seatcolor(v)[0]),
+        ("transmission_raw", "transmission", lambda v: norm.normalize_transmission(v)[1]),
+        ("region_raw", "region", lambda v: norm.normalize_region(v)[0]),
+        ("body_type_raw", "body_type", lambda v: norm.normalize_body_type(v)[0]),
+    ]
+    for raw_field, target_field, to_ru in specs:
+        for raw in (Car.objects.exclude(**{raw_field: ""})
+                    .values_list(raw_field, flat=True).distinct()):
+            ru = to_ru(raw)
+            if ru and ru != raw:
+                updated += (Car.objects.filter(**{raw_field: raw})
+                            .exclude(**{target_field: ru})
+                            .update(**{target_field: ru}))
+    return updated
+
+
+def _translate_catalog_gaps(limit=1000) -> int:
+    """Заполняет name_en у марок/групп/моделей, где он пуст, а name_ko корейский."""
+    from .models import Brand, ModelGroup, Model
+    from .encar import translate
+
+    filled = 0
+    for cls in (Brand, ModelGroup, Model):
+        for obj in cls.objects.filter(name_en="").exclude(name_ko="")[:limit]:
+            if obj.name_ko.isascii():
+                continue  # уже латиница — английское имя не требуется
+            en = translate.translate_text(obj.name_ko, target="en")
+            if en:
+                obj.name_en = en
+                obj.save(update_fields=["name_en"])
+                filled += 1
+    return filled
 
 
 @shared_task

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowLeft, Landmark, Truck, Key, CheckCircle, ChevronRight, FileText, UserCheck, MessageSquare } from 'lucide-react';
 import { Order, Checkpoint } from '../types';
 
