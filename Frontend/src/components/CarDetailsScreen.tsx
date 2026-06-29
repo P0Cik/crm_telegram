@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { ArrowLeft, Check, Clipboard, CheckCircle, Smartphone, User, ShieldCheck } from 'lucide-react';
 import { Car } from '../types';
 import telegram from '../telegram';
@@ -24,7 +23,7 @@ export default function CarDetailsScreen({
   const [phone, setPhone] = useState('');
   const [orderProcessed, setOrderProcessed] = useState(false);
 
-  // Интеграция с Telegram MainButton убрана по просьбе пользователя
+
   useEffect(() => {
     return () => {
       telegram.hideMainButton();
@@ -70,9 +69,9 @@ export default function CarDetailsScreen({
       {/* Main Focus View Swapper */}
       <div className="space-y-2.5">
         <div className="h-64 sm:h-80 rounded-2xl overflow-hidden bg-slate-100 relative border border-slate-150 shadow-inner">
-          <img 
-            src={car.images[activePhotoIdx]} 
-            alt={car.model} 
+          <img
+            src={car.images[activePhotoIdx]}
+            alt={car.model}
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
           />
@@ -89,9 +88,8 @@ export default function CarDetailsScreen({
                 key={idx}
                 type="button"
                 onClick={() => setActivePhotoIdx(idx)}
-                className={`w-16 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition ${
-                  activePhotoIdx === idx ? 'border-sky-500 scale-95 shadow-sm' : 'border-slate-200 hover:border-slate-450'
-                }`}
+                className={`w-16 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition ${activePhotoIdx === idx ? 'border-sky-500 scale-95 shadow-sm' : 'border-slate-200 hover:border-slate-450'
+                  }`}
               >
                 <img src={img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </button>
@@ -129,7 +127,7 @@ export default function CarDetailsScreen({
       {/* Specifications Grid list */}
       <div className="space-y-3">
         <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">Характеристики автомобиля</h3>
-        
+
         <div className="grid grid-cols-2 gap-2.5">
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans">
             <span className="text-[10px] text-slate-400 uppercase font-mono font-medium block">Год выпуска</span>
@@ -212,12 +210,12 @@ export default function CarDetailsScreen({
       </div>
 
       {/* Checkout Drawer (Bottom Sheet Mockup) */}
-      {isOrderSheetOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+      {isOrderSheetOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
           {/* Sheet overlay background dismisser */}
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOrderSheetOpen(false)} />
-          
-          <div className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl animate-in slide-in-from-bottom duration-200 z-[101] max-h-[90dvh] overflow-y-auto flex flex-col">
+
+          <div className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl animate-in slide-in-from-bottom duration-200 z-40 max-h-[90dvh] overflow-y-auto flex flex-col">
             {/* Grabber indicator */}
             <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-2" />
 
@@ -226,7 +224,7 @@ export default function CarDetailsScreen({
                 <h3 className="text-base font-bold text-slate-850">Оформление заказа</h3>
                 <p className="text-[11px] text-slate-450 mt-0.5">{car.make} {car.model} ({car.year})</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsOrderSheetOpen(false)}
                 className="text-xs text-slate-400 hover:text-slate-650 font-bold"
               >
@@ -245,7 +243,7 @@ export default function CarDetailsScreen({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="ФИО получателя"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4.5 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
                 />
               </div>
 
@@ -259,7 +257,7 @@ export default function CarDetailsScreen({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+7 (999) 000-00-00"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4.5 py-3 text-sm text-slate-800 outline-none focus:border-slate-450 focus:bg-white transition"
                 />
               </div>
 
@@ -286,8 +284,7 @@ export default function CarDetailsScreen({
               </button>
             </form>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
