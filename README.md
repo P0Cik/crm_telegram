@@ -1,55 +1,5 @@
 # CRM-система для импорта автомобилей из Кореи
 
-## 🚀 Telegram Mini App интегрирован!
-
-Проект работает как полноценное Telegram Mini App с поддержкой:
-- ✅ Telegram WebApp SDK
-- ✅ Автоматическая тема (светлая/тёмная)
-- ✅ MainButton и BackButton
-- ✅ Тактильная обратная связь
-- ✅ Получение данных пользователя
-
-## Структура проекта
-
-```text
-crm_system/
-├── crm_core/              # Backend (Python/Django)
-│   ├── crm_core/         # Настройки Django
-│   ├── bot/              # Telegram бот (aiogram)
-│   ├── cars/             # Логика работы с автомобилями и Encar
-│   └── manage.py
-├── Frontend/             # React интерфейс (Vite + TypeScript)
-│   ├── src/
-│   │   ├── components/   # React компоненты
-│   │   ├── services/     # API и сервисы данных (api.ts, auth.ts)
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   ├── types.ts
-│   │   └── index.css
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-├── gateway/              # Nginx reverse proxy
-│   ├── nginx.conf
-│   └── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── .env.example
-└── README.md
-```
-
-## Что было сделано (Последние обновления)
-
-✅ **База данных и модели:** Слияние сущностей `Car` и `Advertisement` в единую унифицированную модель.
-✅ **Интеграция с Encar:** Реализована логика синхронизации и парсинга данных через `encar/sync.py`.
-✅ **Подключение Frontend к Backend:** Замена моковых данных на реальные API вызовы (`/api/cars/`, `/api/brands/`).
-✅ **Динамические фильтры:** Frontend теперь динамически загружает доступные марки и модели напрямую из базы данных.
-✅ **Поиск и фильтрация:** Полноценно работает поиск автомобилей с передачей параметров (марка, модель, цена, год, пробег) на Backend через `FiltersScreen`.
-✅ **Telegram Bot:** Обновлена система подписок и уведомлений под новую структуру данных.
-✅ **Docker:** Настроена полная контейнеризация.
-
----
-
 ## Требования
 
 | Компонент | Минимальная версия |
